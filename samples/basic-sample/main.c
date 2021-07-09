@@ -126,15 +126,15 @@ int main(int argc, char *argv[]) {
                IOTCONNECT_SERVER_CERT);
     }
 
-#if (IOTCONNECT_AUTH_TYPE == IOTC_X509)
-    if (access(IOTCONNECT_IDENTITY_CERT, F_OK) != 0 ||
-        access(IOTCONNECT_IDENTITY_KEY, F_OK) != 0
-            ) {
-        fprintf(stderr, "Unable to access device identity private key and certificate. "
-               "Please change directory so that %s can be accessed from the application or update IOTCONNECT_CERT_PATH\n",
-               IOTCONNECT_SERVER_CERT);
+    if (IOTCONNECT_AUTH_TYPE == IOTC_X509) {
+        if (access(IOTCONNECT_IDENTITY_CERT, F_OK) != 0 ||
+            access(IOTCONNECT_IDENTITY_KEY, F_OK) != 0
+                ) {
+            fprintf(stderr, "Unable to access device identity private key and certificate. "
+                   "Please change directory so that %s can be accessed from the application or update IOTCONNECT_CERT_PATH\n",
+                   IOTCONNECT_SERVER_CERT);
+        }
     }
-#endif
 
     IotConnectClientConfig *config = iotconnect_sdk_init_and_get_config();
     config->cpid = IOTCONNECT_CPID;

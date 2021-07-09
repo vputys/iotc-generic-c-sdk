@@ -104,6 +104,9 @@ static IotclDiscoveryResponse *run_http_discovery(const char *cpid, const char *
     }
 
     ret = iotcl_discovery_parse_discovery_response(json_start);
+    if (!ret) {
+        fprintf(stderr, "Error: Unable to get discovery response for environment \"%s\". Please check the environment name in the key vault.\n", env);
+    }
 
     cleanup:
     iotconnect_free_https_response(&response);
