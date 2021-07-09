@@ -24,7 +24,7 @@ The project uses the following dependent projects as git submodules:
 
 * [cJSON](https://github.com/DaveGamble/cJSON.git) v1.7.13
 * [paho.mqtt.c](https://github.com/eclipse/paho.mqtt.c.git) v1.3.9
-* [iotc-c-lib](https://github.com/avnet-iotconnect/iotc-c-lib.git) v2.0.1
+* [iotc-c-lib](https://github.com/avnet-iotconnect/iotc-c-lib.git) v2.0.2
 
 #### Initializing/Downloading The Project
 
