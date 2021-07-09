@@ -315,7 +315,7 @@ int iotconnect_sdk_init() {
                                                   60
             );
             free (sync_response->broker.pass);
-            sync_response->broker.pass = sas_token;
+            sync_response->broker.pass = sas_token; // the token will be freed when freeing the sync response
         }
     }
 

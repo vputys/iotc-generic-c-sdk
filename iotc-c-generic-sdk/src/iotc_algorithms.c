@@ -48,7 +48,6 @@ unsigned char *b64_string_to_buffer(const char *input, unsigned int *len) {
 
 char *b64_buffer_to_string(const unsigned char *input, unsigned int length) {
     BIO *bmem, *b64;
-    BUF_MEM *bptr;
 
     b64 = BIO_new(BIO_f_base64());
     bmem = BIO_new(BIO_s_mem());
@@ -56,6 +55,8 @@ char *b64_buffer_to_string(const unsigned char *input, unsigned int length) {
     //BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
     BIO_write(b64, input, (int) length);
     BIO_flush(b64);
+
+    BUF_MEM *bptr;
     BIO_get_mem_ptr(b64, &bptr);
 
     char *buff = (char *) malloc(bptr->length);
@@ -108,6 +109,7 @@ char *gen_sas_token(const char *host, const char *cpid, const char *duid, char *
             duid
     );
     char *encoded_resource_uri = uri_encode(resource_uri);
+    free(resource_uri);
 
     char *string_to_sign = malloc(strlen(encoded_resource_uri) + 1 /* \n */ + 10 /* epoch time */ + 1 /* NULL */);
     sprintf(string_to_sign, IOTHUB_SIGNATURE_STR_FORMAT,
@@ -115,34 +117,19 @@ char *gen_sas_token(const char *host, const char *cpid, const char *duid, char *
             expiration
     );
 
-    //printf("string_to_sign: >>>%s<<<\n", string_to_sign);
-
 
     unsigned int bufflen = 0;
     unsigned char *key = b64_string_to_buffer(b64key, &bufflen);
 
-    /*
-    printf("key:");
-    for (int i = 0; i < bufflen; i++) {
-        printf("%02x(%u)", key[i], key[i]);
-    }
-    printf("\nbuffer length %d\n", bufflen);
-    */
     unsigned char digest[EVP_MAX_MD_SIZE];;
     unsigned int digest_len = 0;
     hmac_sha256(key, bufflen, string_to_sign, strlen(string_to_sign), digest, &digest_len);
+    free(key);
+    free(string_to_sign);
 
-    /*
-    printf("digest:");
-    for (int i = 0; i < digest_len; i++) {
-        printf("%02x", digest[i]);
-    }
-    printf("\nout length %d\n", digest_len);
-     */
-
-    const char *b64_digest = b64_buffer_to_string(digest, digest_len);
-
+    char *b64_digest = b64_buffer_to_string(digest, digest_len);
     char *encoded_b64_digest = uri_encode(b64_digest);
+    free(b64_digest);
 
     char *sas_token = malloc(sizeof(IOTHUB_SAS_TOKEN_FORMAT) +
                              strlen(encoded_resource_uri) +
@@ -154,6 +141,8 @@ char *gen_sas_token(const char *host, const char *cpid, const char *duid, char *
             encoded_b64_digest,
             expiration
     );
+    free(encoded_resource_uri);
+    free(encoded_b64_digest);
     printf("Token: %s\n", sas_token);
     return sas_token;
 }
