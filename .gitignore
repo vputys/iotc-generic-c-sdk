@@ -1,0 +1,11 @@
+.idea
+
+cmake-build*
+build/
+
+/lib/paho.mqtt.c
+/lib/iotc-c-lib
+
+#private client authentication files
+client-crt.pem
+client-key.pem

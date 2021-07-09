@@ -1,0 +1,25 @@
+name: Project Packages
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Project
+        run: |
+          bash -x ./scripts/setup-project.sh
+
+      - name: Clean Up Extra Files
+        run: |
+          rm -rf .git lib/paho.mqtt.c/.git lib/iotc-c-lib/.git lib/cJSON/.git
+
+      #use wildcards so that directory path is preserved.
+      - name: Publish Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: iotc-c-generic-sdk
+          path: ./*
