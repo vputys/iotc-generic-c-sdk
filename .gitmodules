@@ -1,13 +1,9 @@
 [submodule "lib/paho.mqtt.c"]
 	path = lib/paho.mqtt.c
 	url = https://github.com/eclipse/paho.mqtt.c.git
-	branch = v1.3.9
-[submodule "lib/iotc-c-lib"]
-	path = lib/iotc-c-lib
-	url = https://github.com/avnet-iotconnect/iotc-c-lib.git
-	branch = v2.0.1
 [submodule "lib/cJSON"]
 	path = lib/cJSON
 	url = https://github.com/DaveGamble/cJSON.git
-    branch = v1.7.13
-
+[submodule "lib/iotc-c-lib"]
+	path = lib/iotc-c-lib
+	url = https://github.com/avnet-iotconnect/iotc-c-lib.git
