@@ -6,11 +6,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#ifdef IOTC_USE_PAHO
 #include "iotc_algorithms.h"
+#endif
 #include "iotconnect_discovery.h"
 #include "iotconnect.h"
 #include "iotc_http_request.h"
-#include "iotc_paho_client.h"
+#include "iotc_device_client.h"
 
 #define HTTP_DISCOVERY_URL_FORMAT "https://%s/api/sdk/cpid/%s/lang/M_C/ver/2.0/env/%s"
 #define HTTP_SYNC_URL_FORMAT "https://%s%ssync?"
@@ -190,13 +192,13 @@ static void on_mqtt_c2d_message(unsigned char *message, size_t message_len) {
 
 void iotconnect_sdk_disconnect() {
     printf("Disconnecting...\n");
-    if (0 == iotc_paho_client_disconnect()) {
+    if (0 == iotc_device_client_disconnect()) {
         printf("Disconnected.\n");
     }
 }
 
 bool iotconnect_sdk_is_connected() {
-    return iotc_paho_client_is_connected();
+    return iotc_device_client_is_connected();
 }
 
 IotConnectClientConfig *iotconnect_sdk_init_and_get_config() {
@@ -241,7 +243,7 @@ static void on_message_intercept(IotclEventData data, IotConnectEventType type) 
 }
 
 int iotconnect_sdk_send_packet(const char *data) {
-    return iotc_paho_client_send_message(data);
+    return iotc_device_client_send_message(data);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -306,6 +308,7 @@ int iotconnect_sdk_init() {
         return -1;
     }
 
+#ifdef IOTC_USE_PAHO
     if (config.auth_info.type == IOTC_KEY) {
         if (config.auth_info.data.symmetric_key && strlen(config.auth_info.data.symmetric_key) > 0) {
             char *sas_token = gen_sas_token(sync_response->broker.host,
@@ -318,19 +321,19 @@ int iotconnect_sdk_init() {
             sync_response->broker.pass = sas_token; // the token will be freed when freeing the sync response
         }
     }
-
+#endif
     if (!iotcl_init(&lib_config)) {
         fprintf(stderr, "Error: Failed to initialize the IoTConnect Lib\n");
         return -1;
     }
 
-    IotConnectPahoConfig pc;
+    IotConnectDeviceClientConfig pc;
     pc.sr = sync_response;
     pc.status_cb = config.status_cb;
     pc.c2d_msg_cb = on_mqtt_c2d_message;
     pc.auth = &config.auth_info;
 
-    ret = iotc_paho_client_init(&pc);
+    ret = iotc_device_client_init(&pc);
     if (ret) {
         fprintf(stderr, "Failed to connect!\n");
         return ret;

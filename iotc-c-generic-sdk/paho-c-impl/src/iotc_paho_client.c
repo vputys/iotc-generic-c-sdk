@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "MQTTClient.h"
-#include "iotc_paho_client.h"
+#include "iotc_device_client.h"
 
 #define HOST_URL_FORMAT "ssl://%s:8883"
 
@@ -39,12 +39,12 @@ static void on_connection_lost(void *context, char *cause) {
     printf("MQTT Connection lost. Cause: %s\n", cause);
 
     if (status_cb) {
-        status_cb(MQTT_DISCONNECTED);
+        status_cb(IOTC_CS_MQTT_DISCONNECTED);
     }
     paho_deinit();
 }
 
-int iotc_paho_client_disconnect() {
+int iotc_device_client_disconnect() {
     int rc;
     is_initialized = false;
     if ((rc = MQTTClient_disconnect(client, 10000)) != MQTTCLIENT_SUCCESS) {
@@ -54,14 +54,14 @@ int iotc_paho_client_disconnect() {
     return rc;
 }
 
-bool iotc_paho_client_is_connected() {
+bool iotc_device_client_is_connected() {
     if (!is_initialized) {
         return false;
     }
     return (0 == MQTTClient_isConnected(&client));
 }
 
-int iotc_paho_client_send_message_qos(const char *message, int qos) {
+int iotc_device_client_send_message_qos(const char *message, int qos) {
     MQTTClient_message pubmsg = MQTTClient_message_initializer;
     MQTTClient_deliveryToken token;
     int rc;
@@ -79,11 +79,11 @@ int iotc_paho_client_send_message_qos(const char *message, int qos) {
     return rc;
 }
 
-int iotc_paho_client_send_message(const char *message) {
-    return iotc_paho_client_send_message_qos(message, 1);
+int iotc_device_client_send_message(const char *message) {
+    return iotc_device_client_send_message_qos(message, 1);
 }
 
-int iotc_paho_client_init(IotConnectPahoConfig *c) {
+int iotc_device_client_init(IotConnectDeviceClientConfig *c) {
     MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
     MQTTClient_SSLOptions ssl_opts = MQTTClient_SSLOptions_initializer;
     int rc;
@@ -143,7 +143,7 @@ int iotc_paho_client_init(IotConnectPahoConfig *c) {
     c2d_msg_cb = c->c2d_msg_cb;
 
     if (status_cb) {
-        status_cb(MQTT_CONNECTED);
+        status_cb(IOTC_CS_MQTT_CONNECTED);
     }
 
     return rc;

@@ -17,10 +17,10 @@
 static void on_connection_status(IotConnectConnectionStatus status) {
     // Add your own status handling
     switch (status) {
-        case MQTT_CONNECTED:
+        case IOTC_CS_MQTT_CONNECTED:
             printf("IoTConnect Client Connected\n");
             break;
-        case MQTT_DISCONNECTED:
+        case IOTC_CS_MQTT_DISCONNECTED:
             printf("IoTConnect Client Disconnected\n");
             break;
         default:

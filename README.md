@@ -2,6 +2,8 @@
 
 This IoTConnect C SDK is intended for standard operating systems Linux/Windows/MacOS.
 
+The SDK can be integrated with Azure C Device SDK or Paho MQTT C Client.
+
 ## Building
 
 It is recommended to use JetBrains CLion IDE with the sample projects, but you can also build the projects
@@ -23,8 +25,9 @@ sudo apt-get install libcurl4-openssl-dev libssl-dev
 The project uses the following dependent projects as git submodules:
 
 * [cJSON](https://github.com/DaveGamble/cJSON.git) v1.7.13
-* [paho.mqtt.c](https://github.com/eclipse/paho.mqtt.c.git) v1.3.9
 * [iotc-c-lib](https://github.com/avnet-iotconnect/iotc-c-lib.git) v2.0.2
+* [azure-iot-sdk-c](https://github.com/Azure/azure-iot-sdk-c.git) lts_01_2021
+* [paho.mqtt.c](https://github.com/eclipse/paho.mqtt.c.git) v1.3.9
 
 #### Initializing/Downloading The Project
 
@@ -44,6 +47,8 @@ Place the device certificate and private key into *certs/client-crt.pem* and *ce
 
 * In CLion, open the *basic-sample* project from the *samples* directory of this repo
 * In the top right of of the IDE next to the hammer icon, select *basic-sample*
+* If you wish to build with the Paho MQTT client, Select File->Settings->Build,Execution,Deployment->CMake 
+and enter ```-DIOTC_USE_PAHO=ON``` in the "CMake options" entry box. 
 * Click the build, execute or debug icon.
 
 #### Building and Running with CMake Command Line
@@ -56,4 +61,6 @@ cmake ..
 cmake --build . --target basic-sample
 ./basic-sample
 ```
+
+* If you wish to build with the Paho MQTT client, append ```-DIOTC_USE_PAHO=ON``` to the ```cmake ..``` command line.
 

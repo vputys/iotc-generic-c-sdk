@@ -28,9 +28,9 @@ typedef enum {
 } IotConnectAuthType;
 
 typedef enum {
-    UNDEFINED,
-    MQTT_CONNECTED,
-    MQTT_DISCONNECTED
+    IOTC_CS_UNDEFINED,
+    IOTC_CS_MQTT_CONNECTED,
+    IOTC_CS_MQTT_DISCONNECTED
 } IotConnectConnectionStatus;
 
 typedef void (*IotConnectStatusCallback)(IotConnectConnectionStatus data);

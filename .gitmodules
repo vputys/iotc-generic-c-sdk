@@ -7,3 +7,6 @@
 [submodule "lib/iotc-c-lib"]
 	path = lib/iotc-c-lib
 	url = https://github.com/avnet-iotconnect/iotc-c-lib.git
+[submodule "lib/azure-iot-sdk-c"]
+	path = lib/azure-iot-sdk-c
+	url = git@github.com:Azure/azure-iot-sdk-c.git

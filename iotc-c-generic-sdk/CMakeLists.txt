@@ -1,41 +1,68 @@
 cmake_minimum_required(VERSION 3.0.2)
 
-project(iotc-paho-c-sdk)
+project(iotc-generic-c-sdk)
+
+option(IOTC_USE_PAHO "Use Paho Client. Otherwise the Azure Device SDK will be used." OFF)
 
 #cJSON
 set(ENABLE_CJSON_TEST OFF CACHE BOOL "CJson - Build Tests")
 set(ENABLE_CUSTOM_COMPILER_FLAGS OFF CACHE BOOL "CJson - Custom Compiler Flags")
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../lib/cJSON cJSON EXCLUDE_FROM_ALL)
 
-#paho.mqtt.c
-set(PAHO_BUILD_SHARED OFF CACHE BOOL "Paho - Build with Shared Libraries")
-set(PAHO_BUILD_STATIC ON CACHE BOOL "Paho - Build with Static Libraries")
-set(PAHO_WITH_SSL ON CACHE BOOL "Paho - Use SSL")
-set(PAHO_BUILD_SAMPLES OFF CACHE BOOL "Paho - Build Samples")
-set(PAHO_ENABLE_TESTING OFF CACHE BOOL "Paho - Enable Tesing")
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../lib/paho.mqtt.c/src)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../lib/paho.mqtt.c paho.mqtt.c EXCLUDE_FROM_ALL)
+IF (IOTC_USE_PAHO)
+    #paho.mqtt.c
+    set(PAHO_BUILD_SHARED OFF CACHE BOOL "Paho - Build with Shared Libraries")
+    set(PAHO_BUILD_STATIC ON CACHE BOOL "Paho - Build with Static Libraries")
+    set(PAHO_WITH_SSL ON CACHE BOOL "Paho - Use SSL")
+    set(PAHO_BUILD_SAMPLES OFF CACHE BOOL "Paho - Build Samples")
+    set(PAHO_ENABLE_TESTING OFF CACHE BOOL "Paho - Enable Tesing")
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../lib/paho.mqtt.c/src)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../lib/paho.mqtt.c paho.mqtt.c EXCLUDE_FROM_ALL)
+ELSE ()
+    set(use_amqp OFF CACHE BOOL "")
+    set(use_http OFF CACHE BOOL "")
+    set(run_e2e_tests OFF CACHE BOOL "")
+    set(build_service_client OFF CACHE BOOL "")
+    #set(use_tpm_simulator ON CACHE BOOL "")
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../lib/azure-iot-sdk-c/deps/umock-c/inc)
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../lib/azure-iot-sdk-c/deps/azure-macro-utils-c/inc)
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../lib/azure-iot-sdk-c/iothub_client/inc)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../lib/azure-iot-sdk-c azure-iot-sdk-c EXCLUDE_FROM_ALL)
+ENDIF ()
 
 # iotc-c-lib
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/../lib/iotc-c-lib/src CLibSources)
 
 include_directories(curl-http-impl/include)
-include_directories(paho-c-impl/include)
 include_directories(include)
-file(GLOB SdkSources src/*.c paho-c-impl/src/*.c curl-http-impl/src/*.c)
 
-add_library(iotc-paho-c-sdk STATIC ${cJSON} ${CLibSources} ${SdkSources})
+file(GLOB SdkSources src/*.c curl-http-impl/src/*.c)
+IF (IOTC_USE_PAHO)
+    file(GLOB ImplSources paho-c-impl/src/*.c)
+ELSE ()
+    file(GLOB ImplSources azure-sdk-impl/src/*.c)
+ENDIF ()
 
-target_include_directories(iotc-paho-c-sdk PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../lib/cJSON)
-target_include_directories(iotc-paho-c-sdk PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../lib/iotc-c-lib/include c-li)
-target_include_directories(iotc-paho-c-sdk PUBLIC include)
+add_library(iotc-c-generic-sdk STATIC ${cJSON} ${CLibSources} ${SdkSources} ${ImplSources})
 
-IF (PAHO_BUILD_STATIC)
-    target_link_libraries(iotc-paho-c-sdk paho-mqtt3cs-static)
-ELSE()
-    target_link_libraries(iotc-paho-c-sdk paho-mqtt3cs)
-ENDIF()
+target_include_directories(iotc-c-generic-sdk PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../lib/cJSON)
+target_include_directories(iotc-c-generic-sdk PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../lib/iotc-c-lib/include)
+target_include_directories(iotc-c-generic-sdk PUBLIC include)
 
-target_link_libraries(iotc-paho-c-sdk cjson)
-target_link_libraries(iotc-paho-c-sdk curl)
+IF (IOTC_USE_PAHO)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DIOTC_USE_PAHO")
+    IF (PAHO_BUILD_STATIC)
+        target_link_libraries(iotc-c-generic-sdk paho-mqtt3cs-static)
+    ELSE ()
+        target_link_libraries(iotc-c-generic-sdk paho-mqtt3cs)
+    ENDIF ()
+ELSE ()
+    target_link_libraries(iotc-c-generic-sdk
+            iothub_client
+            iothub_client_mqtt_transport
+            )
+ENDIF ()
+
+target_link_libraries(iotc-c-generic-sdk cjson)
+target_link_libraries(iotc-c-generic-sdk curl)
 
