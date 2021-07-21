@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0.2)
 
 project(basic-sample)
 
-set(IOTC_USE_PAHO ON CACHE BOOL "")
+set(IOTC_USE_PAHO OFF CACHE BOOL "")
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../iotc-c-generic-sdk SdkSources)
 
 include_directories(config PRIVATE)
