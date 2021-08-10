@@ -73,3 +73,17 @@ cmake --build . --target basic-sample
 ```
 
 * If you wish to build with the Paho MQTT client, append ```-DIOTC_USE_PAHO=ON``` to the ```cmake ..``` command line.
+
+#### Running on SmartEdge IIoT Gateway
+
+The cmake building steps can be run on the gateway and do not require any addtional build tools or libraries to be installed.
+
+The gateway requires a fix to openssl. If ```openssl version -d``` returns **OPENSSLDIR: "/usr/local/ssl"**, execute these steps before running the sample:
+
+```shell script
+sudo rmdir  /usr/local/ssl/certs
+sudo ln -sf /etc/ssl/certs /usr/local/ssl/.
+```
+
+It is recommended to use TPM authentication on the gateway, so configure app_config.h accordingly. 
+
