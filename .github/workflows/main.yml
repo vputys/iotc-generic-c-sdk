@@ -15,11 +15,17 @@ jobs:
 
       - name: Clean Up Extra Files
         run: |
-          rm -rf .git lib/paho.mqtt.c/.git lib/iotc-c-lib/.git lib/cJSON/.git
+          find . -type d -name '.git' | xargs rm -rf
+
+      - name: Make Source Tarball
+        run: |
+          mkdir -p /tmp/iotc-c-generic-sdk-src/
+          tar -xf /tmp/iotc-c-generic-sdk-src/sources.tar .
+          mv iotc-c-generic-sdk-src/ .
 
       #use wildcards so that directory path is preserved.
-      - name: Publish Artifacts
+      - name: Publish Source Artifacts
         uses: actions/upload-artifact@v2
         with:
           name: iotc-c-generic-sdk
-          path: ./*
+          path: iotc-c-generic-sdk-src
