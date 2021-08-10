@@ -383,8 +383,8 @@ int iotconnect_sdk_init() {
     // so update dtg with new sync call
     if (config.auth_info.type == IOTC_AT_TPM && sync_response->ds == IOTCL_SR_DEVICE_NOT_REGISTERED) {
         iotcl_discovery_free_sync_response(sync_response);
-        lib_config.telemetry.dtg = sync_response->dtg;
         sync_response = run_http_sync(config.cpid, config.duid);
+        lib_config.telemetry.dtg = sync_response->dtg;
         if (NULL == sync_response) {
             // Sync_call will print the error
             return -2;
