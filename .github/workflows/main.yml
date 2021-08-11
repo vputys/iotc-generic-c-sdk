@@ -20,7 +20,7 @@ jobs:
       - name: Make Source Tarball
         run: |
           mkdir iotc-c-generic-sdk-src/
-          tar -cf iotc-c-generic-sdk-src/sources.tar --exclude='./iotc-c-generic-sdk-src' .
+          tar -zcf iotc-c-generic-sdk-src/sources.tar.gz --exclude='./iotc-c-generic-sdk-src' .
 
       #use wildcards so that directory path is preserved.
       - name: Publish Source Artifacts
