@@ -122,14 +122,6 @@ static IotclDiscoveryResponse *run_http_discovery(const char *cpid, const char *
 
 static IotclSyncResponse *run_http_sync(const char *cpid, const char *uniqueid) {
     IotclSyncResponse *ret = NULL;
-    if (config.auth_info.type == IOTC_AT_TPM) {
-        if (!uniqueid || strlen(uniqueid) == 0) {
-            if (!tpm_registration_id) {
-                tpm_registration_id = iotc_device_client_get_tpm_registration_id();
-            }
-            uniqueid = tpm_registration_id;
-        }
-    }
     char *url_buff = malloc(sizeof(HTTP_SYNC_URL_FORMAT) +
                             strlen(discovery_response->host) +
                             strlen(discovery_response->path)
@@ -272,6 +264,15 @@ void iotconnect_sdk_receive() {
 // this the Initialization os IoTConnect SDK
 int iotconnect_sdk_init() {
     int ret;
+
+    if (config.auth_info.type == IOTC_AT_TPM) {
+        if (!config.duid || strlen(config.duid) == 0) {
+            if (!tpm_registration_id) {
+                tpm_registration_id = iotc_device_client_get_tpm_registration_id();
+            }
+            config.duid = tpm_registration_id;
+        }
+    }
 
     if (!discovery_response) {
         discovery_response = run_http_discovery(config.cpid, config.env);
