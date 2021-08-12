@@ -85,5 +85,14 @@ sudo rmdir  /usr/local/ssl/certs
 sudo ln -sf /etc/ssl/certs /usr/local/ssl/.
 ```
 
-It is recommended to use TPM authentication on the gateway, so configure app_config.h accordingly. 
+If you have configured your gateway using the phone app or you are using the pre-installed IoTConnect app, 
+you should also disable it  using the commands below.
+A device can have only one connection to IoTConnect.
 
+```shell script
+sudo systemctl disable iotconnectservice.service
+sudo systemctl stop iotconnectservice.service
+```
+
+It is recommended to use TPM authentication on the gateway, so configure app_config.h accordingly. 
+ 
