@@ -13,13 +13,12 @@ struct MemoryStruct {
     size_t size;
 };
 
-static size_t write_memory_cb(void *contents, size_t size, size_t nmemb, void *userp)
-{
+static size_t write_memory_cb(void *contents, size_t size, size_t nmemb, void *userp) {
     size_t realsize = size * nmemb;
-    struct MemoryStruct *mem = (struct MemoryStruct *)userp;
+    struct MemoryStruct *mem = (struct MemoryStruct *) userp;
 
     char *ptr = realloc(mem->memory, mem->size + realsize + 1);
-    if(!ptr) {
+    if (!ptr) {
         /* out of memory! */
         printf("not enough memory (realloc returned NULL)\n");
         return 0;
@@ -52,6 +51,10 @@ int iotconnect_https_request(
     /* get a curl handle */
     curl = curl_easy_init();
     if (curl) {
+        struct MemoryStruct chunk;
+        chunk.memory = malloc(1);  /* will be grown as needed by the realloc above */
+        chunk.size = 0;    /* no data at this point */
+
         struct curl_slist *header_slist = NULL;
         header_slist = curl_slist_append(header_slist, "Content-Type: application/json");
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header_slist);
@@ -61,16 +64,17 @@ int iotconnect_https_request(
         }
         response->data = malloc(1); // start with 1 byte and regrow into write_memory_cb
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_memory_cb);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response->data);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &chunk);
 
         /* Perform the request, res will get the return code */
         res = curl_easy_perform(curl);
         /* Check for errors */
         if (res != CURLE_OK) {
             fprintf(stderr, "iotconnect_https_request() failed: %s\n", curl_easy_strerror(res));
-            free(response->data);
-            response->data = NULL;
+            free(chunk.memory);
+            chunk.memory = NULL;
         }
+        response->data = chunk.memory;
         /* always cleanup */
         curl_easy_cleanup(curl);
     }
