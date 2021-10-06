@@ -62,7 +62,7 @@ bool iotc_device_client_is_connected() {
     if (!is_initialized) {
         return false;
     }
-    return (0 == MQTTClient_isConnected(&client));
+    return MQTTClient_isConnected(client);
 }
 
 int iotc_device_client_send_message_qos(const char *message, int qos) {
