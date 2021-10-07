@@ -44,55 +44,14 @@ The project uses the following dependent projects as git submodules:
 This project has git submodules that need to be pulled before building. You can either:
 
 * Download this project from the GitHub Releases or Actions
-* or Clone this repo and perform the following steps: 
-  * Initialize the project using the script on Linux/MacOS with ```scripts/setup-project.sh```
-  * or examine the script and perform the actions for your OS.
+* or Clone this repo or download and perform the following steps:
+* Follow the instructions for your OS:
+  * [Linux Instructions](doc/Linux.md)
+  * [Windows Instructions](doc/Windows.md) 
 * Edit samples/basic-sample/config/app_config.h to reflect your account and device's configuration.
 * If using CA Certificate based authentication, follow the instructions in the 
 [iotc-c-lib/tools/ecc-certs](https://github.com/avnet-iotconnect/iotc-c-lib/tree/master/tools/ecc-certs) 
 repo and create the identify for your device. 
 Place the device certificate and private key into *certs/client-crt.pem* and *certs/client-key.pem* in the basic-sample project.
 
-#### Building and Running with CLion
-
-* In CLion, open the *basic-sample* project from the *samples* directory of this repo
-* In the top right of of the IDE next to the hammer icon, select *basic-sample*
-* If you wish to build with the Paho MQTT client insted of Azure SDK, Select File->Settings->Build,Execution,Deployment->CMake 
-and enter ```-DIOTC_USE_PAHO=ON``` in the "CMake options" entry box.
-* Click the build, execute or debug icon.
-
-#### Building and Running with CMake Command Line
-
-```shell script
-cd samples/basic-sample
-mkdir build
-cd build
-cmake ..
-cmake --build . --target basic-sample
-./basic-sample
-```
-
-* If you wish to build with the Paho MQTT client, append ```-DIOTC_USE_PAHO=ON``` to the ```cmake ..``` command line.
-
-#### Running on SmartEdge IIoT Gateway
-
-The cmake building steps can be run on the gateway and do not require any addtional build tools or libraries to be installed.
-
-The gateway requires a fix to openssl. If ```openssl version -d``` returns **OPENSSLDIR: "/usr/local/ssl"**, execute these steps before running the sample:
-
-```shell script
-sudo rmdir  /usr/local/ssl/certs
-sudo ln -sf /etc/ssl/certs /usr/local/ssl/.
-```
-
-If you have configured your gateway using the phone app or you are using the pre-installed IoTConnect app, 
-you should also disable it  using the commands below.
-A device can have only one connection to IoTConnect.
-
-```shell script
-sudo systemctl disable iotconnectservice.service
-sudo systemctl stop iotconnectservice.service
-```
-
-It is recommended to use TPM authentication on the gateway, so configure app_config.h accordingly. 
  
