@@ -12,6 +12,20 @@
 
 #include "app_config.h"
 
+// windows compatibility
+#if defined(_WIN32) || defined(_WIN64)
+#define F_OK 0
+#include <Windows.h>
+#include <io.h>
+int usleep(unsigned long usec) {
+    Sleep(usec / 1000);
+    return 0;
+}
+#define access    _access_s
+#else
+#include <unistd.h>
+#endif
+
 #define APP_VERSION "00.01.00"
 
 static void on_connection_status(IotConnectConnectionStatus status) {
