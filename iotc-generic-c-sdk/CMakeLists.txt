@@ -84,6 +84,17 @@ ELSE ()
     )
 ENDIF ()
 
+
+IF (CMAKE_TOOLCHAIN_FILE)
+    # not the best way to detect VCPKG, but we'll go with that
+    find_package(CURL CONFIG REQUIRED)
+ELSE ()
+    find_package(CURL REQUIRED)
+ENDIF()
+
+target_link_libraries(iotc-c-generic-sdk CURL::libcurl)
+
 target_link_libraries(iotc-c-generic-sdk cjson)
-target_link_libraries(iotc-c-generic-sdk curl)
+
+
 
