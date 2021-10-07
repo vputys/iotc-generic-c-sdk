@@ -19,12 +19,12 @@ jobs:
 
       - name: Make Source Tarball
         run: |
-          mkdir iotc-c-generic-sdk-src/
-          tar -zcf iotc-c-generic-sdk-src/iotc-c-generic-sdk-src.tar.gz --transform 's,^,iotc-generic-c-sdk/,' --exclude='./iotc-c-generic-sdk-src' .
+          mkdir iotc-generic-c-sdk-src/
+          tar -zcf iotc-generic-c-sdk-src/iotc-generic-c-sdk-src.tar.gz --transform 's,^,iotc-generic-c-sdk/,' --exclude='./iotc-generic-c-sdk-src' .
 
       #use wildcards so that directory path is preserved.
       - name: Publish Source Artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: iotc-c-generic-sdk
-          path: iotc-c-generic-sdk-src
+          name: iotc-generic-c-sdk
+          path: iotc-generic-c-sdk-src
