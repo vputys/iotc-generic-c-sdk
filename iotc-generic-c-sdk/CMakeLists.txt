@@ -9,6 +9,9 @@ IF (IOTC_USE_PAHO AND IOTC_TPM_SUPPORT)
     MESSAGE(FATAL_ERROR "TPM functionality is not supported by Paho")
 ENDIF()
 
+# Affects all dependencies.
+# Building with shared libs can cause problems in Windows
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "")
 
 #cJSON
 set(ENABLE_CJSON_TEST OFF CACHE BOOL "CJson - Build Tests")
