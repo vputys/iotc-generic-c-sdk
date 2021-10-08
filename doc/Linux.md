@@ -1,3 +1,15 @@
+#### Initial Setup
+
+Install cmake, make and an adequate C compiler and tools before building. This can be done on Ubuntu by executing:
+```shell script
+sudo apt-get install build-essential cmake 
+``` 
+On Ubuntu, you can run the following command to satisfy the library dependencies: 
+
+```shell script
+sudo apt-get install libcurl4-openssl-dev libssl-dev uuid-dev
+```
+
 #### Git Setup
 
 If you cloned the repo, execute ```scripts/setup-project.sh```. 

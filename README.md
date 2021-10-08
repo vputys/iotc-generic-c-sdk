@@ -6,18 +6,11 @@ The SDK can be integrated with Azure IoT C SDK or Paho MQTT C Client.
 
 The Paho MQTT implementation does not support TPM authentication.
 
-## Building
-
-It is recommended to use JetBrains CLion IDE with the sample projects, but you can also build the projects
-with cmake command line tool manually.
-
-Install cmake, make and an adequate C compiler and tools before building. This can be done on Ubuntu by executing:
-```shell script
-sudo apt-get install build-essential cmake 
-``` 
+#### CMake Build Options
 
 Note that the following build options are configured by default and can be toggled with cmake flags:
-* IOTC_USE_PAHO=OFF - builds with Azure IoT C SDK by default.
+* IOTC_USE_PAHO=ON - Builds with Paho MQTT Client instead of Azure IoT C SDK by default.
+* IOTC_TPM_SUPPORT=ON -  Adds TPM Support for Azure IoT C SDK. Requires IOTC_USE_PAHO=OFF.
 
 #### Dependencies
 
@@ -26,11 +19,7 @@ The project depends on curl openssl libraries and uuid library (uuid required fo
 Both the shared libraries and the C source headers are required to be present on the build host for building. 
 Curl and openssl shared libraries must be present on the device when running the project. 
 
-On Ubuntu, you can run the following command to satisfy the library dependencies: 
 
-```shell script
-sudo apt-get install libcurl4-openssl-dev libssl-dev uuid-dev
-```
 
 The project uses the following dependent projects as git submodules:
 
