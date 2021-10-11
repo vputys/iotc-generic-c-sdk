@@ -18,7 +18,8 @@ exit
 
 By exiting the PowerShell we ensure that we pick up the "integrate install" environment. 
 
-Run a new PowerShell or use developer console in Visual Studio 
+Run a new PowerShell or use developer console in Visual Studio. If running PowerShell 
+ensure to change the directory to where this repo is extracted or cloned. 
 
 
 ```shell script

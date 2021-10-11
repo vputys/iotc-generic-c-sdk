@@ -40,7 +40,6 @@ This project has git submodules that need to be pulled before building. You can 
 * Edit samples/basic-sample/config/app_config.h to reflect your account and device's configuration.
 * If using CA Certificate based authentication, follow the instructions in the 
 [iotc-c-lib/tools/ecc-certs](https://github.com/avnet-iotconnect/iotc-c-lib/tree/master/tools/ecc-certs) 
-repo and create the identify for your device. 
+repo and create the identify for your device.
 Place the device certificate and private key into *certs/client-crt.pem* and *certs/client-key.pem* in the basic-sample project.
-
- 
+* Build or re-build the project after editing the *app_config.h* file.  
