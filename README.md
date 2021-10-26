@@ -6,6 +6,8 @@ The SDK can be integrated with Azure IoT C SDK or Paho MQTT C Client.
 
 The Paho MQTT implementation does not support TPM authentication.
 
+To get started quickly, see the [SmartEdge Industrial IoT Gateway](https://www.youtube.com/watch?v=j6AC95nz7IY) and [IoTConnect Generic C SDK Windows](https://www.youtube.com/watch?v=cvP3zmcs8JA) demo videos on YouTube.
+ 
 #### CMake Build Options
 
 Note that the following build options are configured by default and can be toggled with cmake flags:
