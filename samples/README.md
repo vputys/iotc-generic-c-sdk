@@ -25,4 +25,4 @@ store the device certificate and private key at the certs directory as *client-c
 * **TPM (IOTC_AT_TPM):** If *IOTCONNECT_DUID* is blank, the TPM Registration ID will be obtained from TPM and it will be used in place of *IOTCONNECT_DUID*.
 *IOTCONNECT_SCOPE_ID* must be set to the Scope ID provided in your *Settings->Key Vault* section under the *DPS* tab as *Scope ID for TPM Devices*.
 
-See build instructions at thetop of theis repository on details on how to build the project.
+See build instructions at the top of this repository on details on how to build the project.
