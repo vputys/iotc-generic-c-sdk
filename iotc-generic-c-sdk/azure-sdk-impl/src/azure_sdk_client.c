@@ -45,6 +45,7 @@ typedef struct DPS_CLIENT_INFO_TAG
 DPS_CLIENT_INFO dps_data = {0};
 
 static bool is_client_active = false;
+static bool is_inside_callback = false; // If inside callback, never call DoWork() or endless recursion will trigger
 static bool is_iothub_initialized = false;
 static bool is_message_confirmed = false;
 static IOTHUB_DEVICE_CLIENT_LL_HANDLE device_ll_handle = NULL;
@@ -106,13 +107,14 @@ static void send_confirm_callback(IOTHUB_CLIENT_CONFIRMATION_RESULT result, void
 
 static IOTHUBMESSAGE_DISPOSITION_RESULT receive_msg_callback(IOTHUB_MESSAGE_HANDLE message, void *user_context) {
     (void) user_context;
+    is_inside_callback = true;
     IOTHUBMESSAGE_CONTENT_TYPE content_type = IoTHubMessage_GetContentType(message);
     if (content_type == IOTHUBMESSAGE_BYTEARRAY) {
         const unsigned char *buff_msg;
         size_t buff_len;
 
         if (IoTHubMessage_GetByteArray(message, &buff_msg, &buff_len) != IOTHUB_MESSAGE_OK) {
-            fprintf(stderr, "Error: Unable to extract c2d message from IoTHub.");
+            fprintf(stderr, "Error: Unable to extract c2d message from IoTHub.\n");
         } else {
             if (c2d_msg_cb) {
                 c2d_msg_cb((unsigned char *) buff_msg, buff_len);
@@ -121,12 +123,13 @@ static IOTHUBMESSAGE_DISPOSITION_RESULT receive_msg_callback(IOTHUB_MESSAGE_HAND
     } else {
         const char *string_msg = IoTHubMessage_GetString(message);
         if (string_msg == NULL) {
-            fprintf(stderr, "Error: Unable to extract c2d message from IoTHub.");
+            fprintf(stderr, "Error: Unable to extract c2d message from IoTHub.\n");
         }
         if (c2d_msg_cb) {
             c2d_msg_cb((unsigned char *) string_msg, strlen(string_msg));
         }
     }
+    is_inside_callback = false;
     return IOTHUBMESSAGE_ACCEPTED;
 }
 
@@ -134,6 +137,7 @@ static void
 connection_status_callback(IOTHUB_CLIENT_CONNECTION_STATUS result, IOTHUB_CLIENT_CONNECTION_STATUS_REASON reason,
                            void *user_context) {
     (void) user_context;
+    is_inside_callback = true;
 
     if (reason == IOTHUB_CLIENT_CONNECTION_OK && result == IOTHUB_CLIENT_CONNECTION_AUTHENTICATED) {
         connection_status = IOTC_CS_MQTT_CONNECTED;
@@ -143,7 +147,9 @@ connection_status_callback(IOTHUB_CLIENT_CONNECTION_STATUS result, IOTHUB_CLIENT
     if (status_cb) {
         status_cb(connection_status);
     }
+    is_inside_callback = false;
 }
+
 
 int iotc_device_client_disconnect() {
     client_deinit();
@@ -161,7 +167,7 @@ bool iotc_device_client_is_connected() {
 int iotc_device_client_send_message(const char *message) {
     if (connection_status != IOTC_CS_MQTT_CONNECTED) {
         fprintf(stderr, "Error: Failed to send message: %s. Client is not connected.", message);
-        return -1;
+        return -3;
     }
     IOTHUB_MESSAGE_HANDLE message_handle = IoTHubMessage_CreateFromString(message);
     is_message_confirmed = false;
@@ -171,6 +177,11 @@ int iotc_device_client_send_message(const char *message) {
     }
     IoTHubMessage_Destroy(message_handle);
 
+    if (is_inside_callback) {
+        // calling IoTHubDeviceClient_LL_DoWork will trigger endless recusion in this case
+        // we cannot confirm these messages so we have to retun a non-zero exit code so that the user is aware.
+        return -2;
+    }
     for (int i = 0; i < MQTT_PUBLISH_TIMEOUT_MS / 10 && !is_message_confirmed; i++) {
         IoTHubDeviceClient_LL_DoWork(device_ll_handle);
         ThreadAPI_Sleep(10);

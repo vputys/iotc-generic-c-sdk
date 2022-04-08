@@ -3,8 +3,8 @@
 // Created by Nik Markovic <nikola.markovic@avnet.com> on 6/24/21.
 //
 
-#ifndef IOTC_PAHO_CLIENT_H
-#define IOTC_PAHO_CLIENT_H
+#ifndef IOTC_DEVICE_CLIENT_H
+#define IOTC_DEVICE_CLIENT_H
 
 #include "iotconnect_discovery.h"
 #include "iotconnect.h"
@@ -31,6 +31,13 @@ int iotc_device_client_disconnect();
 bool iotc_device_client_is_connected();
 
 // sends message with QOS 1
+// If called wthin an Azure C SDK callback (like on_message), the the message confirmation cannot be established
+// and the return code will be non-zero
+// returns:
+// -1 if message confirmation timed out
+// -2 if message confirmation cannot be established
+// -3 if the client is not connected
+
 int iotc_device_client_send_message(const char *message);
 
 // sends message with specified qos
@@ -47,4 +54,4 @@ char* iotc_device_client_get_tpm_registration_id();
 }
 #endif
 
-#endif // IOTC_PAHO_CLIENT_H
+#endif // IOTC_DEVICE_CLIENT_H
