@@ -24,6 +24,7 @@
 
 
 
+
 #ifndef MQTT_PUBLISH_TIMEOUT_MS
 #define MQTT_PUBLISH_TIMEOUT_MS     10000L
 #endif
@@ -35,6 +36,11 @@
 #ifndef IOTC_PROVISIONING_URL
 #define IOTC_PROVISIONING_URL "global.azure-devices-provisioning.net"
 #endif
+
+#define MESSAGE_COUNT 500
+static char propText1[1024];
+static char propText2[1024];
+static char propText3[1024];
 
 typedef struct DPS_CLIENT_INFO_TAG
 {
@@ -52,6 +58,9 @@ static IOTHUB_DEVICE_CLIENT_LL_HANDLE device_ll_handle = NULL;
 static IotConnectC2dCallback c2d_msg_cb = NULL; // callback for inbound messages
 static IotConnectStatusCallback status_cb = NULL; // callback for connection connection_status
 static IotConnectConnectionStatus connection_status = IOTC_CS_UNDEFINED;
+
+const char* meta_cd;
+double meta_v;
 
 // file_to_string() credit: https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
 static char *file_to_string(const char *filename) {
@@ -164,18 +173,42 @@ bool iotc_device_client_is_connected(void) {
     return (connection_status == IOTC_CS_MQTT_CONNECTED);
 }
 
+int iotc_device_client_send_ack_message(const char* message) {
+    return iotc_device_client_send_message_with_mt(message, 6); 
+}
 
-int iotc_device_client_send_message(const char *message) {
+int iotc_device_client_send_message(const char* message) {
+    return iotc_device_client_send_message_with_mt(message, 0);
+}
+
+int iotc_device_client_send_message_with_mt(const char* message, int mt )
+{
     if (connection_status != IOTC_CS_MQTT_CONNECTED) {
         fprintf(stderr, "Error: Failed to send message: %s. Client is not connected.", message);
-        return -3;
+        return -1;
     }
-    IOTHUB_MESSAGE_HANDLE message_handle = IoTHubMessage_CreateFromString(message);
+    IOTHUB_MESSAGE_HANDLE message_handle;
+    //IOTHUB_MESSAGE_HANDLE message_handle = IoTHubMessage_CreateFromString(message);
+    if ((message_handle = IoTHubMessage_CreateFromString(message)) == NULL){
+        (void)printf("ERROR: iotHubMessageHandle is NULL!\r\n");
+    }else{
+        MAP_HANDLE propMap = IoTHubMessage_Properties(message_handle);
+        (void)sprintf_s(propText1, sizeof(propText1), "%s", meta_cd);
+        (void)sprintf_s(propText2, sizeof(propText2), "%f", meta_v);
+        (void)sprintf_s(propText3, sizeof(propText3), "%d", mt);
+
+        Map_AddOrUpdate(propMap, "cd", propText1);
+        Map_AddOrUpdate(propMap, "v", propText2);
+        Map_AddOrUpdate(propMap, "mt", propText3);//
+
+        if (IoTHubDeviceClient_LL_SendEventAsync(device_ll_handle, message_handle, send_confirm_callback, (void*)message_handle) !=
+            IOTHUB_MESSAGE_OK) {
+            fprintf(stderr, "Error: Failed to send message: %s", message);
+        }else{
+            (void)printf("IoTHubModuleClient_LL_SendEventAsync accepted message for transmission to IoT Hub.\r\n");
+        }
+    }
     is_message_confirmed = false;
-    if (IoTHubDeviceClient_LL_SendEventAsync(device_ll_handle, message_handle, send_confirm_callback, NULL) !=
-        IOTHUB_CLIENT_OK) {
-        fprintf(stderr, "Error: Failed to send message: %s", message);
-    }
     IoTHubMessage_Destroy(message_handle);
 
     if (is_inside_callback) {
@@ -190,7 +223,7 @@ int iotc_device_client_send_message(const char *message) {
     if (is_message_confirmed) {
         is_message_confirmed = true;
         return 0;
-    } else {
+    }else {
         fprintf(stderr, "Unable to obtain message confirmation for message %s", message);
         return -1;
     }
@@ -301,7 +334,8 @@ IOTHUB_DEVICE_CLIENT_LL_HANDLE provision_with_dps(const char* id_scope, const ch
 }
 
 int iotc_device_client_init(IotConnectDeviceClientConfig *c) {
-
+    meta_cd = c->sr->meta.cd;
+    meta_v = c->sr->meta.v;
     // Used to initialize IoTHub SDK subsystem
     if (!is_iothub_initialized) {
         is_iothub_initialized = true;
@@ -347,6 +381,8 @@ int iotc_device_client_init(IotConnectDeviceClientConfig *c) {
                     c->sr->broker.host,
                     c->sr->broker.client_id
             );
+
+            
             break;
         case IOTC_AT_TPM:
             break;
@@ -369,6 +405,8 @@ int iotc_device_client_init(IotConnectDeviceClientConfig *c) {
                     c->sr->broker.client_id,
                     c->auth->data.symmetric_key
             );
+
+            printf("Connection string %s\n", connection_string_buffer);
             break;
         default:
             fprintf(stderr, "Unknown authentication type\n");

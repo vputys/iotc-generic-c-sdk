@@ -14,8 +14,10 @@
 #include "iotc_http_request.h"
 #include "iotc_device_client.h"
 
-#define HTTP_DISCOVERY_URL_FORMAT "https://%s/api/sdk/cpid/%s/lang/M_C/ver/2.0/env/%s"
-#define HTTP_SYNC_URL_FORMAT "https://%s%ssync?"
+#include "iotconnect_common.h"
+
+#define HTTP_DISCOVERY_URL_FORMAT_2_1 "https://%s/api/v2.1/dsdk/cpId/%s/env/%s"
+#define HTTP_SYNC_URL_FORMAT_2_1 "%s/uid/%s"
 
 static IotclConfig lib_config = {0};
 static IotConnectClientConfig config = {0};
@@ -23,6 +25,10 @@ static IotConnectClientConfig config = {0};
 // cached discovery/sync response:
 static IotclDiscoveryResponse *discovery_response = NULL;
 static IotclSyncResponse *sync_response = NULL;
+
+//
+static char LastTime[25] = "0000-00-00T00:00:00.000Z";
+static char LastTime_hb[25] = "0000-00-00T00:00:00.000Z";
 
 // cached TPM registration ID if TPM auth is used
 // once (if) we support a discpose method, we should free this value
@@ -42,7 +48,7 @@ static void report_sync_error(const IotclSyncResponse *response, const char *syn
         fprintf(stderr, "Failed to obtain sync response?\n");
         return;
     }
-    switch (response->ds) {
+    switch (response->ec) {
         case IOTCL_SR_DEVICE_NOT_REGISTERED:
             fprintf(stderr, "IOTC_SyncResponse error: Not registered\n");
             break;
@@ -80,20 +86,20 @@ static void report_sync_error(const IotclSyncResponse *response, const char *syn
 
 static IotclDiscoveryResponse *run_http_discovery(const char *cpid, const char *env) {
     IotclDiscoveryResponse *ret = NULL;
-    char *url_buff = malloc(sizeof(HTTP_DISCOVERY_URL_FORMAT) +
-                            sizeof(IOTCONNECT_DISCOVERY_HOSTNAME) +
-                            strlen(cpid) +
-                            strlen(env) - 4 /* %s x 2 */
+    char* url_buff =  malloc(sizeof(HTTP_DISCOVERY_URL_FORMAT_2_1) +
+             sizeof(IOTCONNECT_DISCOVERY_HOSTNAME) +
+             strlen(cpid) +
+             strlen(env) - 4 /* %s x 2 */
     );
 
+     sprintf(url_buff, HTTP_DISCOVERY_URL_FORMAT_2_1,
+                IOTCONNECT_DISCOVERY_HOSTNAME, cpid, env
+            );
+    
     if(!url_buff) {
         fprintf(stderr, "Unable to allocate memory");
         return NULL;
     }
-
-    sprintf(url_buff, HTTP_DISCOVERY_URL_FORMAT,
-            IOTCONNECT_DISCOVERY_HOSTNAME, cpid, env
-    );
 
     IotConnectHttpResponse response;
     iotconnect_https_request(&response,
@@ -113,7 +119,6 @@ static IotclDiscoveryResponse *run_http_discovery(const char *cpid, const char *
     if (json_start != response.data) {
         dump_response("WARN: Expected JSON to start immediately in the returned data.", &response);
     }
-
     ret = iotcl_discovery_parse_discovery_response(json_start);
     if (!ret) {
         fprintf(stderr, "Error: Unable to get discovery response for environment \"%s\". Please check the environment name in the key vault.\n", env);
@@ -128,38 +133,30 @@ static IotclDiscoveryResponse *run_http_discovery(const char *cpid, const char *
 
 static IotclSyncResponse *run_http_sync(const char *cpid, const char *uniqueid) {
     IotclSyncResponse *ret = NULL;
-    char *url_buff = malloc(sizeof(HTTP_SYNC_URL_FORMAT) +
-                            strlen(discovery_response->host) +
-                            strlen(discovery_response->path)
-    );
-    char *post_data = malloc(IOTCONNECT_DISCOVERY_PROTOCOL_POST_DATA_MAX_LEN + 1);
 
-    if (!url_buff || !post_data) {
+    char* url_buff = malloc(sizeof(HTTP_SYNC_URL_FORMAT_2_1) +
+        strlen(discovery_response->url) +
+        strlen(uniqueid)
+    );
+
+    if (!url_buff) {
         fprintf(stderr, "run_http_sync: Out of memory!");
         free(url_buff); // one of them could have succeeded
-        free(post_data);
         return NULL;
     }
 
-    sprintf(url_buff, HTTP_SYNC_URL_FORMAT,
-            discovery_response->host,
-            discovery_response->path
-    );
-    snprintf(post_data,
-             IOTCONNECT_DISCOVERY_PROTOCOL_POST_DATA_MAX_LEN, /*total length should not exceed MTU size*/
-             IOTCONNECT_DISCOVERY_PROTOCOL_POST_DATA_TEMPLATE,
-             cpid,
-             uniqueid
+    sprintf(url_buff, HTTP_SYNC_URL_FORMAT_2_1,
+        discovery_response->url,
+        uniqueid
     );
 
     IotConnectHttpResponse response;
     iotconnect_https_request(&response,
-                             url_buff,
-                             post_data
+        url_buff,
+        NULL
     );
 
     free(url_buff);
-    free(post_data);
 
     if (NULL == response.data) {
         dump_response("Unable to parse HTTP response.", &response);
@@ -175,8 +172,8 @@ static IotclSyncResponse *run_http_sync(const char *cpid, const char *uniqueid) 
     }
 
     ret = iotcl_discovery_parse_sync_response(json_start);
-    if (!ret || ret->ds != IOTCL_SR_OK) {
-        if (config.auth_info.type == IOTC_AT_TPM && ret && ret->ds == IOTCL_SR_DEVICE_NOT_REGISTERED) {
+    if (!ret || ret->ec != IOTCL_SR_OK) {
+        if (config.auth_info.type == IOTC_AT_TPM && ret && ret->ec == IOTCL_SR_DEVICE_NOT_REGISTERED) {
             // malloc below will be freed when we iotcl_discovery_free_sync_response
             ret->broker.client_id = malloc(strlen(uniqueid) + 1 /* - */ + strlen(cpid) + 1);
             if(!ret->broker.client_id) {
@@ -253,8 +250,8 @@ static void on_message_intercept(IotclEventData data, IotConnectEventType type) 
             iotconnect_sdk_disconnect(); // client will get notification that we disconnected and will reinit
             break;
 
-        case ON_CLOSE:
-            printf("Got ON_CLOSE. Closing the mqtt connection. Device restart is required.\n");
+        case ON_CLOSE: case DEVICE_DELETE: case DEVICE_DISABLE: case STOP_OPERATION:
+            printf("Closing the mqtt connection. Device restart is required.\n");
             iotconnect_sdk_disconnect();
             break;
 
@@ -268,7 +265,49 @@ static void on_message_intercept(IotclEventData data, IotConnectEventType type) 
 }
 
 int iotconnect_sdk_send_packet(const char *data) {
-    return iotc_device_client_send_message(data);
+    int send_tel = NULL;
+    char* NowTime = iotcl_iso_timestamp_now();
+    long int Timediff = iotcl_get_time_difference(NowTime, LastTime);
+    if (sync_response->meta.df <= Timediff) {
+       if (iotconnect_sdk_is_connected()) {
+           send_tel = iotc_device_client_send_message(data);
+           printf("Sending: %s\n", data);
+       }else {
+                printf("[Warning]:: Device Disconnected.......! Publish Data Corrupted");
+       }
+       for (int ss = 0; ss < 25; ss++)
+           LastTime[ss] = NowTime[ss];
+    }
+    if (sync_response->meta.hb_event == 110) {
+       char* NowTime_hb = iotcl_iso_timestamp_now();
+       long int Timediff_hb = iotcl_get_time_difference(NowTime_hb, LastTime_hb);
+       if (sync_response->meta.start_hb <= Timediff_hb) {
+          printf("Sending: Heart Beat %s\n", NowTime_hb);
+          char* hb_snd = iotcl_prosess_hb();
+          iotc_device_client_send_message(hb_snd);
+          for (int ss = 0; ss < 25; ss++)
+              LastTime_hb[ss] = NowTime_hb[ss];
+       }
+    }
+ return send_tel;
+}
+
+int iotconnect_sdk_send_ack_packet(const char* data) {
+    return iotc_device_client_send_ack_message(data);
+}
+
+static void get_df(IotclEventData data) {
+    sync_response->meta.df = iotcl_df_update(data);
+
+}
+
+static void stop_heartbeat(IotclEventData data) {
+    sync_response->meta.hb_event = iotcl_hb_event(data);
+}
+
+static void start_heartbeat(IotclEventData data) {
+    sync_response->meta.start_hb = iotcl_hb_update(data);
+    sync_response->meta.hb_event = iotcl_hb_event(data);
 }
 
 void iotconnect_sdk_receive(void) {
@@ -290,6 +329,7 @@ int iotconnect_sdk_init(void) {
     }
 
     if (!discovery_response) {
+        //discovery_response = run_http_discovery(config.cpid, config.env);
         discovery_response = run_http_discovery(config.cpid, config.env);
         if (NULL == discovery_response) {
             // get_base_url will print the error
@@ -320,6 +360,9 @@ int iotconnect_sdk_init(void) {
     lib_config.event_functions.ota_cb = config.ota_cb;
     lib_config.event_functions.cmd_cb = config.cmd_cb;
     lib_config.event_functions.msg_cb = on_message_intercept;
+    lib_config.event_functions.get_df = get_df;
+    lib_config.event_functions.hb_cmd = start_heartbeat;
+    lib_config.event_functions.hb_stop = stop_heartbeat;
 
     lib_config.telemetry.dtg = sync_response->dtg;
 
@@ -353,6 +396,7 @@ int iotconnect_sdk_init(void) {
     if (config.auth_info.type == IOTC_AT_SYMMETRIC_KEY) {
         if (config.auth_info.data.symmetric_key && strlen(config.auth_info.data.symmetric_key) > 0) {
 #ifdef IOTC_USE_PAHO
+
             // for paho we need to pass the generated sas token
             char *sas_token = gen_sas_token(sync_response->broker.host,
                                                   config.cpid,
@@ -397,7 +441,7 @@ int iotconnect_sdk_init(void) {
 
     // Workaround: upon first time TPM registration, the information returned from sync will be partial,
     // so update dtg with new sync call
-    if (config.auth_info.type == IOTC_AT_TPM && sync_response->ds == IOTCL_SR_DEVICE_NOT_REGISTERED) {
+    if (config.auth_info.type == IOTC_AT_TPM && sync_response->ec == IOTCL_SR_DEVICE_NOT_REGISTERED) {
         iotcl_discovery_free_sync_response(sync_response);
         sync_response = run_http_sync(config.cpid, config.duid);
         if (NULL == sync_response) {

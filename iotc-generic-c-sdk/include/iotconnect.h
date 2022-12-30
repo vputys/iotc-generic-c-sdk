@@ -58,6 +58,7 @@ typedef struct {
     char *env;    // Settings -> Key Vault -> CPID.
     char *cpid;   // Settings -> Key Vault -> Evnironment.
     char *duid;   // Name of the device.
+    char* sid;
     int qos; // QOS for outbound messages. Default 1.
     IotConnectAuthInfo auth_info;
     IotclOtaCallback ota_cb; // callback for OTA events.
@@ -81,6 +82,8 @@ void iotconnect_sdk_receive(void);
 // blocks until sent and returns 0 if successful.
 // data is a null-terminated string
 int iotconnect_sdk_send_packet(const char *data);
+
+int iotconnect_sdk_send_ack_packet(const char* data);
 
 void iotconnect_sdk_disconnect(void);
 

@@ -46,17 +46,17 @@ static void command_status(IotclEventData data, bool status, const char *command
     const char *ack = iotcl_create_ack_string_and_destroy_event(data, status, message);
     printf("command: %s status=%s: %s\n", command_name, status ? "OK" : "Failed", message);
     printf("Sent CMD ack: %s\n", ack);
-    iotconnect_sdk_send_packet(ack);
+    iotconnect_sdk_send_ack_packet(ack);
     free((void *) ack);
 }
 
 static void on_command(IotclEventData data) {
     char *command = iotcl_clone_command(data);
     if (NULL != command) {
-        command_status(data, false, command, "Not implemented");
+        command_status(data, true, command, "Not implemented");
         free((void *) command);
     } else {
-        command_status(data, false, "?", "Internal error");
+        command_status(data, true, "?", "Internal error");
     }
 }
 
@@ -109,7 +109,7 @@ static void on_ota(IotclEventData data) {
     const char *ack = iotcl_create_ack_string_and_destroy_event(data, success, message);
     if (NULL != ack) {
         printf("Sent OTA ack: %s\n", ack);
-        iotconnect_sdk_send_packet(ack);
+        iotconnect_sdk_send_ack_packet(ack);
         free((void *) ack);
     }
 }
@@ -126,7 +126,6 @@ static void publish_telemetry() {
 
     const char *str = iotcl_create_serialized_string(msg, false);
     iotcl_telemetry_destroy(msg);
-    printf("Sending: %s\n", str);
     iotconnect_sdk_send_packet(str); // underlying code will report an error
     iotcl_destroy_serialized(str);
 }
@@ -183,13 +182,13 @@ int main(int argc, char *argv[]) {
             return ret;
         }
 
-        // send 10 messages
-        for (int i = 0; iotconnect_sdk_is_connected() && i < 10; i++) {
+        // send 1000 messages
+        for (int i = 0; iotconnect_sdk_is_connected() && i < 1000; i++) {
             publish_telemetry();
-            // repeat approximately evey ~5 seconds
-            for (int k = 0; k < 500; k++) {
+            // repeat approximately evey ~1 seconds
+            for (int k = 0; k < 1; k++) {
                 iotconnect_sdk_receive();
-                usleep(10000); // 10ms
+                usleep(1000); // 10ms
             }
         }
         iotconnect_sdk_disconnect();

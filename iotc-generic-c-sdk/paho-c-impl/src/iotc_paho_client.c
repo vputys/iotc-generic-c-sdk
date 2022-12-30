@@ -12,6 +12,7 @@
 static bool is_initialized = false;
 static MQTTClient client = NULL;
 static char *publish_topic;
+static char* ack_topic;
 static IotConnectC2dCallback c2d_msg_cb = NULL; // callback for inbound messages
 static IotConnectStatusCallback status_cb = NULL; // callback for connection status
 
@@ -22,6 +23,8 @@ static void paho_deinit(void) {
     }
     free(publish_topic);
     publish_topic = NULL;
+    free(ack_topic);
+    ack_topic = NULL;
     c2d_msg_cb = NULL;
     status_cb = NULL;
 }
@@ -87,6 +90,31 @@ int iotc_device_client_send_message(const char *message) {
     return iotc_device_client_send_message_qos(message, 1);
 }
 
+
+int iotc_device_client_send_ack_message_qos(const char* message, int qos) {
+    MQTTClient_message pubmsg = MQTTClient_message_initializer;
+    MQTTClient_deliveryToken token;
+    int rc;
+    pubmsg.payload = (void*)message;
+    pubmsg.payloadlen = (int)strlen(message);
+    pubmsg.qos = qos;
+    pubmsg.retained = 0;
+    if ((rc = MQTTClient_publishMessage(client, ack_topic, &pubmsg, &token)) != MQTTCLIENT_SUCCESS) {
+        fprintf(stderr, "Failed to publish message, return code %d\n", rc);
+        return rc;
+    }
+
+    rc = MQTTClient_waitForCompletion(client, token, MQTT_PUBLISH_TIMEOUT_MS);
+    //printf("Message with delivery token %d delivered\n", token);
+    return rc;
+}
+
+
+int iotc_device_client_send_ack_message(const char* message) {
+    return iotc_device_client_send_ack_message_qos(message, 0); //change it to 1
+}
+
+
 int iotc_device_client_init(IotConnectDeviceClientConfig *c) {
     MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
     MQTTClient_SSLOptions ssl_opts = MQTTClient_SSLOptions_initializer;
@@ -96,6 +124,13 @@ int iotc_device_client_init(IotConnectDeviceClientConfig *c) {
 
     publish_topic = strdup(c->sr->broker.pub_topic);
     if (!publish_topic) {
+        fprintf(stderr, "ERROR: Unable to allocate memory for paho host URL!");
+        return -1;
+    }
+
+    ack_topic = strdup(c->sr->broker.ack_pub_topic);
+    if (!ack_topic)
+    {
         fprintf(stderr, "ERROR: Unable to allocate memory for paho host URL!");
         return -1;
     }
