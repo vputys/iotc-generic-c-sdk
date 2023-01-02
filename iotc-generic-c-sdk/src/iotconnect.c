@@ -80,10 +80,10 @@ static void report_sync_error(const IotclSyncResponse *response, const char *syn
 
 static IotclDiscoveryResponse *run_http_discovery(const char *cpid, const char *env) {
     IotclDiscoveryResponse *ret = NULL;
-    char* url_buff =  malloc(sizeof(HTTP_DISCOVERY_URL_FORMAT_2_1) +
-                             sizeof(IOTCONNECT_DISCOVERY_HOSTNAME) +
-                             strlen(cpid) +
-                             strlen(env) - 4 /* %s x 2 */
+    char *url_buff = malloc(sizeof(HTTP_DISCOVERY_URL_FORMAT_2_1) +
+                            sizeof(IOTCONNECT_DISCOVERY_HOSTNAME) +
+                            strlen(cpid) +
+                            strlen(env) - 4 /* %s x 2 */
     );
 
      sprintf(url_buff, HTTP_DISCOVERY_URL_FORMAT_2_1,
@@ -127,9 +127,9 @@ static IotclDiscoveryResponse *run_http_discovery(const char *cpid, const char *
 
 static IotclSyncResponse *run_http_sync(const char *cpid, const char *uniqueid) {
     IotclSyncResponse *ret = NULL;
-    char* url_buff = malloc(sizeof(HTTP_SYNC_URL_FORMAT_2_1) +
-        strlen(discovery_response->url) +
-        strlen(uniqueid)
+    char *url_buff = malloc(sizeof(HTTP_SYNC_URL_FORMAT_2_1) +
+                            strlen(discovery_response->url) +
+                            strlen(uniqueid)
     );
 
     if (!url_buff) {
@@ -257,11 +257,11 @@ static void on_message_intercept(IotclEventData data, IotConnectEventType type) 
     }
 }
 
-int iotconnect_sdk_send_packet(const char* data) {
+int iotconnect_sdk_send_packet(const char *data) {
     return iotc_device_client_send_message(data);
 }
 
-int iotconnect_sdk_send_ack_packet(const char* data) {
+int iotconnect_sdk_send_ack_packet(const char *data) {
     return iotc_device_client_send_ack_message(data);
 }
 

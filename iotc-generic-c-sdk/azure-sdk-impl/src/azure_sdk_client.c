@@ -44,8 +44,8 @@ static char propText3[1024];
 
 typedef struct DPS_CLIENT_INFO_TAG
 {
-    char* iothub_uri;
-    char* device_id;
+    char *iothub_uri;
+    char *device_id;
     int registration_complete;
 } DPS_CLIENT_INFO;
 DPS_CLIENT_INFO dps_data = {0};
@@ -59,7 +59,7 @@ static IotConnectC2dCallback c2d_msg_cb = NULL; // callback for inbound messages
 static IotConnectStatusCallback status_cb = NULL; // callback for connection connection_status
 static IotConnectConnectionStatus connection_status = IOTC_CS_UNDEFINED;
 
-const char* meta_cd;
+const char *meta_cd;
 double meta_v;
 
 // file_to_string() credit: https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
@@ -173,15 +173,15 @@ bool iotc_device_client_is_connected(void) {
     return (connection_status == IOTC_CS_MQTT_CONNECTED);
 }
 
-int iotc_device_client_send_ack_message(const char* message) {
+int iotc_device_client_send_ack_message(const char *message) {
     return iotc_device_client_send_message_with_mt(message, 6); 
 }
 
-int iotc_device_client_send_message(const char* message) {
+int iotc_device_client_send_message(const char *message) {
     return iotc_device_client_send_message_with_mt(message, 0);
 }
 
-int iotc_device_client_send_message_with_mt(const char* message, int mt )
+int iotc_device_client_send_message_with_mt(const char *message, int mt )
 {
     if (connection_status != IOTC_CS_MQTT_CONNECTED) {
         fprintf(stderr, "Error: Failed to send message: %s. Client is not connected.", message);

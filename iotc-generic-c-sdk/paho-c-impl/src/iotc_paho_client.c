@@ -12,7 +12,7 @@
 static bool is_initialized = false;
 static MQTTClient client = NULL;
 static char *publish_topic;
-static char* ack_topic;
+static char *ack_topic;
 static IotConnectC2dCallback c2d_msg_cb = NULL; // callback for inbound messages
 static IotConnectStatusCallback status_cb = NULL; // callback for connection status
 
@@ -90,7 +90,7 @@ int iotc_device_client_send_message(const char *message) {
     return iotc_device_client_send_message_qos(message, 1);
 }
 
-int iotc_device_client_send_ack_message_qos(const char* message, int qos) {
+int iotc_device_client_send_ack_message_qos(const char *message, int qos) {
     MQTTClient_message pubmsg = MQTTClient_message_initializer;
     MQTTClient_deliveryToken token;
     int rc;
@@ -108,7 +108,7 @@ int iotc_device_client_send_ack_message_qos(const char* message, int qos) {
     return rc;
 }
 
-int iotc_device_client_send_ack_message(const char* message) {
+int iotc_device_client_send_ack_message(const char *message) {
     return iotc_device_client_send_ack_message_qos(message, 0); //change it to 1
 }
 

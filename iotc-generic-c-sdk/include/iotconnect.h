@@ -82,7 +82,7 @@ void iotconnect_sdk_receive(void);
 // data is a null-terminated string
 int iotconnect_sdk_send_packet(const char *data);
 
-int iotconnect_sdk_send_ack_packet(const char* data);
+int iotconnect_sdk_send_ack_packet(const char *data);
 
 void iotconnect_sdk_disconnect(void);
 

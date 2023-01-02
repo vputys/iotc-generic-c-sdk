@@ -43,13 +43,13 @@ int iotc_device_client_send_message(const char *message);
 // sends message with specified qos
 int iotc_device_client_send_message_qos(const char *message, int qos);
 
-int iotc_device_client_send_message_with_mt(const char* message, int mt);
+int iotc_device_client_send_message_with_mt(const char *message, int mt);
 
 // sends ack message with QOS 1
-int iotc_device_client_send_ack_message(const char* message);
+int iotc_device_client_send_ack_message(const char *message);
 
 // sends ack message with specified qos
-int iotc_device_client_send_ack_message_qos(const char* message, int qos);
+int iotc_device_client_send_ack_message_qos(const char *message, int qos);
 
 void iotc_device_client_receive(void);
 
