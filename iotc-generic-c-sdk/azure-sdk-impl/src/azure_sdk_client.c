@@ -185,7 +185,7 @@ int iotc_device_client_send_message_with_mt(const char* message, int mt )
 {
     if (connection_status != IOTC_CS_MQTT_CONNECTED) {
         fprintf(stderr, "Error: Failed to send message: %s. Client is not connected.", message);
-        return -1;
+        return -3;
     }
     IOTHUB_MESSAGE_HANDLE message_handle;
     //IOTHUB_MESSAGE_HANDLE message_handle = IoTHubMessage_CreateFromString(message);
@@ -223,7 +223,7 @@ int iotc_device_client_send_message_with_mt(const char* message, int mt )
     if (is_message_confirmed) {
         is_message_confirmed = true;
         return 0;
-    }else {
+    } else {
         fprintf(stderr, "Unable to obtain message confirmation for message %s", message);
         return -1;
     }
@@ -334,6 +334,7 @@ IOTHUB_DEVICE_CLIENT_LL_HANDLE provision_with_dps(const char* id_scope, const ch
 }
 
 int iotc_device_client_init(IotConnectDeviceClientConfig *c) {
+    
     meta_cd = c->sr->meta.cd;
     meta_v = c->sr->meta.v;
     // Used to initialize IoTHub SDK subsystem
@@ -380,9 +381,7 @@ int iotc_device_client_init(IotConnectDeviceClientConfig *c) {
             sprintf(connection_string_buffer, IOTC_CONNECTION_STRING_FORMAT_X509,
                     c->sr->broker.host,
                     c->sr->broker.client_id
-            );
-
-            
+            );        
             break;
         case IOTC_AT_TPM:
             break;
@@ -405,8 +404,6 @@ int iotc_device_client_init(IotConnectDeviceClientConfig *c) {
                     c->sr->broker.client_id,
                     c->auth->data.symmetric_key
             );
-
-            printf("Connection string %s\n", connection_string_buffer);
             break;
         default:
             fprintf(stderr, "Unknown authentication type\n");

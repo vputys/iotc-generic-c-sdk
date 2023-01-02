@@ -14,8 +14,6 @@
 #include "iotc_http_request.h"
 #include "iotc_device_client.h"
 
-#include "iotconnect_common.h"
-
 #define HTTP_DISCOVERY_URL_FORMAT_2_1 "https://%s/api/v2.1/dsdk/cpId/%s/env/%s"
 #define HTTP_SYNC_URL_FORMAT_2_1 "%s/uid/%s"
 
@@ -25,10 +23,6 @@ static IotConnectClientConfig config = {0};
 // cached discovery/sync response:
 static IotclDiscoveryResponse *discovery_response = NULL;
 static IotclSyncResponse *sync_response = NULL;
-
-//
-static char LastTime[25] = "0000-00-00T00:00:00.000Z";
-static char LastTime_hb[25] = "0000-00-00T00:00:00.000Z";
 
 // cached TPM registration ID if TPM auth is used
 // once (if) we support a discpose method, we should free this value
@@ -87,9 +81,9 @@ static void report_sync_error(const IotclSyncResponse *response, const char *syn
 static IotclDiscoveryResponse *run_http_discovery(const char *cpid, const char *env) {
     IotclDiscoveryResponse *ret = NULL;
     char* url_buff =  malloc(sizeof(HTTP_DISCOVERY_URL_FORMAT_2_1) +
-             sizeof(IOTCONNECT_DISCOVERY_HOSTNAME) +
-             strlen(cpid) +
-             strlen(env) - 4 /* %s x 2 */
+                             sizeof(IOTCONNECT_DISCOVERY_HOSTNAME) +
+                             strlen(cpid) +
+                             strlen(env) - 4 /* %s x 2 */
     );
 
      sprintf(url_buff, HTTP_DISCOVERY_URL_FORMAT_2_1,
@@ -133,7 +127,6 @@ static IotclDiscoveryResponse *run_http_discovery(const char *cpid, const char *
 
 static IotclSyncResponse *run_http_sync(const char *cpid, const char *uniqueid) {
     IotclSyncResponse *ret = NULL;
-
     char* url_buff = malloc(sizeof(HTTP_SYNC_URL_FORMAT_2_1) +
         strlen(discovery_response->url) +
         strlen(uniqueid)
@@ -152,8 +145,8 @@ static IotclSyncResponse *run_http_sync(const char *cpid, const char *uniqueid) 
 
     IotConnectHttpResponse response;
     iotconnect_https_request(&response,
-        url_buff,
-        NULL
+                             url_buff,
+                             NULL
     );
 
     free(url_buff);
@@ -264,50 +257,12 @@ static void on_message_intercept(IotclEventData data, IotConnectEventType type) 
     }
 }
 
-int iotconnect_sdk_send_packet(const char *data) {
-    int send_tel = NULL;
-    char* NowTime = iotcl_iso_timestamp_now();
-    long int Timediff = iotcl_get_time_difference(NowTime, LastTime);
-    if (sync_response->meta.df <= Timediff) {
-       if (iotconnect_sdk_is_connected()) {
-           send_tel = iotc_device_client_send_message(data);
-           printf("Sending: %s\n", data);
-       }else {
-                printf("[Warning]:: Device Disconnected.......! Publish Data Corrupted");
-       }
-       for (int ss = 0; ss < 25; ss++)
-           LastTime[ss] = NowTime[ss];
-    }
-    if (sync_response->meta.hb_event == 110) {
-       char* NowTime_hb = iotcl_iso_timestamp_now();
-       long int Timediff_hb = iotcl_get_time_difference(NowTime_hb, LastTime_hb);
-       if (sync_response->meta.start_hb <= Timediff_hb) {
-          printf("Sending: Heart Beat %s\n", NowTime_hb);
-          char* hb_snd = iotcl_prosess_hb();
-          iotc_device_client_send_message(hb_snd);
-          for (int ss = 0; ss < 25; ss++)
-              LastTime_hb[ss] = NowTime_hb[ss];
-       }
-    }
- return send_tel;
+int iotconnect_sdk_send_packet(const char* data) {
+    return iotc_device_client_send_message(data);
 }
 
 int iotconnect_sdk_send_ack_packet(const char* data) {
     return iotc_device_client_send_ack_message(data);
-}
-
-static void get_df(IotclEventData data) {
-    sync_response->meta.df = iotcl_df_update(data);
-
-}
-
-static void stop_heartbeat(IotclEventData data) {
-    sync_response->meta.hb_event = iotcl_hb_event(data);
-}
-
-static void start_heartbeat(IotclEventData data) {
-    sync_response->meta.start_hb = iotcl_hb_update(data);
-    sync_response->meta.hb_event = iotcl_hb_event(data);
 }
 
 void iotconnect_sdk_receive(void) {
@@ -360,9 +315,6 @@ int iotconnect_sdk_init(void) {
     lib_config.event_functions.ota_cb = config.ota_cb;
     lib_config.event_functions.cmd_cb = config.cmd_cb;
     lib_config.event_functions.msg_cb = on_message_intercept;
-    lib_config.event_functions.get_df = get_df;
-    lib_config.event_functions.hb_cmd = start_heartbeat;
-    lib_config.event_functions.hb_stop = stop_heartbeat;
 
     lib_config.telemetry.dtg = sync_response->dtg;
 

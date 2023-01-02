@@ -90,7 +90,6 @@ int iotc_device_client_send_message(const char *message) {
     return iotc_device_client_send_message_qos(message, 1);
 }
 
-
 int iotc_device_client_send_ack_message_qos(const char* message, int qos) {
     MQTTClient_message pubmsg = MQTTClient_message_initializer;
     MQTTClient_deliveryToken token;
@@ -109,11 +108,9 @@ int iotc_device_client_send_ack_message_qos(const char* message, int qos) {
     return rc;
 }
 
-
 int iotc_device_client_send_ack_message(const char* message) {
     return iotc_device_client_send_ack_message_qos(message, 0); //change it to 1
 }
-
 
 int iotc_device_client_init(IotConnectDeviceClientConfig *c) {
     MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
@@ -134,7 +131,6 @@ int iotc_device_client_init(IotConnectDeviceClientConfig *c) {
         fprintf(stderr, "ERROR: Unable to allocate memory for paho host URL!");
         return -1;
     }
-
     char *paho_host_url = malloc(sizeof(HOST_URL_FORMAT) - 2 + strlen(c->sr->broker.host));
     if (NULL == paho_host_url) {
         fprintf(stderr,"ERROR: Unable to allocate memory for paho host URL!");

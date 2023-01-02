@@ -51,8 +51,6 @@ int iotc_device_client_send_ack_message(const char* message);
 // sends ack message with specified qos
 int iotc_device_client_send_ack_message_qos(const char* message, int qos);
 
-
-
 void iotc_device_client_receive(void);
 
 // Returns the TPM registration ID from the TPM chip.

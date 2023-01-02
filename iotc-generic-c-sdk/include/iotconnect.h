@@ -58,7 +58,6 @@ typedef struct {
     char *env;    // Settings -> Key Vault -> CPID.
     char *cpid;   // Settings -> Key Vault -> Evnironment.
     char *duid;   // Name of the device.
-    char* sid;
     int qos; // QOS for outbound messages. Default 1.
     IotConnectAuthInfo auth_info;
     IotclOtaCallback ota_cb; // callback for OTA events.
