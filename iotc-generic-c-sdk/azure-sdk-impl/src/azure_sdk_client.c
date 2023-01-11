@@ -79,7 +79,7 @@ static char *file_to_string(const char *filename) {
         fclose(f);
     }
 
-    if (0 == num_read || num_read != length) {
+    if (0 == num_read || num_read != (size_t) length) {
         fprintf(stderr, "Unable to read device PEM info at %s\n", filename);
         free(buffer);
         return NULL;
@@ -202,7 +202,7 @@ int iotc_device_client_send_message_with_mt(const char *message, int mt )
         Map_AddOrUpdate(propMap, "mt", propText3);//
 
         if (IoTHubDeviceClient_LL_SendEventAsync(device_ll_handle, message_handle, send_confirm_callback, (void*)message_handle) !=
-            IOTHUB_MESSAGE_OK) {
+            IOTHUB_CLIENT_OK) {
             fprintf(stderr, "Error: Failed to send message: %s", message);
         }else{
             (void)printf("IoTHubModuleClient_LL_SendEventAsync accepted message for transmission to IoT Hub.\r\n");
@@ -237,6 +237,8 @@ void iotc_device_client_receive(void) {
 }
 
 int iotc_device_client_send_message_qos(const char *message, int qos) {
+    (void) qos;
+
     fprintf(stderr,
             "WARNING: QOS level and retry policy is currently not supported by the Azure Device SDK implementation");
     return iotc_device_client_send_message(message);

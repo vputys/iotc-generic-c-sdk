@@ -133,6 +133,9 @@ static void publish_telemetry() {
 
 
 int main(int argc, char *argv[]) {
+    (void) argc;
+    (void) argv;
+
     if (access(IOTCONNECT_SERVER_CERT, F_OK) != 0) {
         fprintf(stderr, "Unable to access IOTCONNECT_SERVER_CERT. "
                "Please change directory so that %s can be accessed from the application or update IOTCONNECT_CERT_PATH\n",

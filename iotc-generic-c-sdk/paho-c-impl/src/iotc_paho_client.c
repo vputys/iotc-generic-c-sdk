@@ -30,6 +30,9 @@ static void paho_deinit(void) {
 }
 
 static int on_c2d_message(void *context, char *topicName, int topicLen, MQTTClient_message *message) {
+    (void) context;
+    (void) topicLen;
+
     if (c2d_msg_cb) {
         c2d_msg_cb(message->payload, message->payloadlen);
     }
@@ -39,6 +42,8 @@ static int on_c2d_message(void *context, char *topicName, int topicLen, MQTTClie
 }
 
 static void on_connection_lost(void *context, char *cause) {
+    (void) context;
+
     printf("MQTT Connection lost. Cause: %s\n", cause);
 
     if (status_cb) {
