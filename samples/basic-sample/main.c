@@ -133,19 +133,25 @@ static void publish_telemetry() {
 
 
 int main(int argc, char *argv[]) {
-    if (access(IOTCONNECT_SERVER_CERT, F_OK) != 0) {
-        fprintf(stderr, "Unable to access IOTCONNECT_SERVER_CERT. "
-               "Please change directory so that %s can be accessed from the application or update IOTCONNECT_CERT_PATH\n",
-               IOTCONNECT_SERVER_CERT);
-    }
+    if (access(IOTCONNECT_BALTIMORE_CYBERTRUST_ROOT_CERT, F_OK) != 0) {
+        fprintf(stderr, "Unable to access IOTCONNECT_BALTIMORE_CYBERTRUST_ROOT_CERT. "
+            "Please change directory so that %s can be accessed from the application or update IOTCONNECT_CERT_PATH\n",
+            IOTCONNECT_BALTIMORE_CYBERTRUST_ROOT_CERT);
+        }
+
+    if (access(IOTCONNECT_DIGICERT_GLOBAL_ROOT_G2_CERT, F_OK) != 0) {
+        fprintf(stderr, "Unable to access IOTCONNECT_BALTIMORE_CYBERTRUST_ROOT_CERT. "
+            "Please change directory so that %s can be accessed from the application or update IOTCONNECT_CERT_PATH\n",
+            IOTCONNECT_DIGICERT_GLOBAL_ROOT_G2_CERT);
+        }
 
     if (IOTCONNECT_AUTH_TYPE == IOTC_AT_X509) {
         if (access(IOTCONNECT_IDENTITY_CERT, F_OK) != 0 ||
             access(IOTCONNECT_IDENTITY_KEY, F_OK) != 0
-                ) {
+            ) {
             fprintf(stderr, "Unable to access device identity private key and certificate. "
-                   "Please change directory so that %s can be accessed from the application or update IOTCONNECT_CERT_PATH\n",
-                   IOTCONNECT_SERVER_CERT);
+                "Please change directory so that %s or %s can be accessed from the application or update IOTCONNECT_CERT_PATH\n",
+                IOTCONNECT_BALTIMORE_CYBERTRUST_ROOT_CERT, IOTCONNECT_DIGICERT_GLOBAL_ROOT_G2_CERT);
         }
     }
 
@@ -154,7 +160,7 @@ int main(int argc, char *argv[]) {
     config->env = IOTCONNECT_ENV;
     config->duid = IOTCONNECT_DUID;
     config->auth_info.type = IOTCONNECT_AUTH_TYPE;
-    config->auth_info.trust_store = IOTCONNECT_SERVER_CERT;
+    config->auth_info.trust_store = IOTCONNECT_BALTIMORE_CYBERTRUST_ROOT_CERT;
 
     if (config->auth_info.type == IOTC_AT_X509) {
         config->auth_info.data.cert_info.device_cert = IOTCONNECT_IDENTITY_CERT;
@@ -179,8 +185,14 @@ int main(int argc, char *argv[]) {
     for (int j = 0; j < 10; j++) {
         int ret = iotconnect_sdk_init();
         if (0 != ret) {
-            fprintf(stderr, "IoTConnect exited with error code %d\n", ret);
-            return ret;
+            // Trying to connect with DIGICERT GLOBAL ROOT G2 TLS Certificate. 
+            // Since connection failed with BALTIMORE CYBERTRUST ROOT TLS Certificate.
+            config->auth_info.trust_store = IOTCONNECT_DIGICERT_GLOBAL_ROOT_G2_CERT;
+            ret = iotconnect_sdk_init();
+            if (0 != ret) {
+                fprintf(stderr, "IoTConnect exited with error code %d\n", ret);
+                return ret;
+            }
         }
 
         // send 10 messages

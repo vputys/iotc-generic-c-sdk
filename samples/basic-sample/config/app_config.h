@@ -26,8 +26,19 @@
 #define IOTCONNECT_CERT_PATH "../certs"
 
 // This is the CA Certificate used to validate the IoTHub TLS Connection and it is required for all authentication types.
-// Alternatively, you can point this file to /etc/ssl/certs/Baltimore_CyberTrust_Root.pem on some Linux systems
-#define IOTCONNECT_SERVER_CERT (IOTCONNECT_CERT_PATH "/server.pem")
+
+/*-----------------------------------------------Azure lib.....!-----------------------------------------------*/
+// On Linux systems Alternatively, Azure lib points this file to /etc/ssl/certs/Baltimore_CyberTrust_Root.pem & /etc/ssl/certs/DigiCert_Global_Root_G2.pem.
+// On windows systems Alternatively, Azure lib itself points this file to Current User\Trusted Root certification Authorities\certificate\Baltimore_CyberTrust_Root.pem 
+// &  Current User\Trusted Root certification Authorities\certificate\DigiCert_Global_Root_G2.pem.
+
+/*-----------------------------------------------PAHO MQTT lib.....!-----------------------------------------------*/
+// For Linux as well as Windowes systems, Using PAHO MQTT lib "Baltimore CyberTrust Root.pem" and "DigiCert Global Root G2" certificate 
+// are stored in "../certs" folder along with SDK And declared below.
+
+#define IOTCONNECT_BALTIMORE_CYBERTRUST_ROOT_CERT (IOTCONNECT_CERT_PATH "/server.pem")
+
+#define IOTCONNECT_DIGICERT_GLOBAL_ROOT_G2_CERT (IOTCONNECT_CERT_PATH "/DigiCertGlobalRootG2crt.pem")
 
 // if IOTC_X509 is used:
 #define IOTCONNECT_IDENTITY_CERT (IOTCONNECT_CERT_PATH "/client-crt.pem")
