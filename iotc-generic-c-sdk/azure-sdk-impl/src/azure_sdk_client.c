@@ -318,7 +318,7 @@ int iotc_device_client_init(IotConnectDeviceClientConfig *c) {
                 fprintf(stderr, "Sync response did not return a SAS token. Is your device auth type set to Token?\n");
                 return -1;
             }
-            connection_string_buffer = malloc(sizeof(IOTC_CONNECTION_STRING_FORMAT_KEY)
+            connection_string_buffer = malloc(sizeof(IOTC_CONNECTION_STRING_FORMAT_SAS_TOKEN)
                                               + strlen(c->sr->broker.host)
                                               + strlen(c->sr->broker.client_id)
                                               + strlen(c->sr->broker.pass)
