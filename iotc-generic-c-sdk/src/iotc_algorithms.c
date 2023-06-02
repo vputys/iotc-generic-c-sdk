@@ -46,6 +46,10 @@ void sha256_helper(const unsigned char *data1, int datalen1,
 	EVP_MD_CTX_free(c);
 }
 
+/*
+ * This implementation of hmac_sha256 is based on the description in Wikipedia
+ * https://en.wikipedia.org/wiki/HMAC
+ */
 void hmac_sha256(const void *key, int keylen,
                                    const unsigned char *data, int datalen,
                                    unsigned char *result, unsigned int *resultlen) {
