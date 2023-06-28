@@ -284,15 +284,18 @@ IOTHUB_DEVICE_CLIENT_LL_HANDLE provision_with_dps(const char* id_scope, const ch
 
     Prov_Device_LL_Destroy(prov_handle);
 
+    IOTHUB_DEVICE_CLIENT_LL_HANDLE device_handle = NULL;
     if (dps_data.registration_complete != 1) {
         (void)printf("Device registration failed!\n");
-    }
+	goto cleanup;
+    } 
 
-    IOTHUB_DEVICE_CLIENT_LL_HANDLE device_handle;
     (void)printf("Creating IoTHub Device handle\n");
     if ((device_handle = IoTHubDeviceClient_LL_CreateFromDeviceAuth(dps_data.iothub_uri, dps_data.device_id, MQTT_Protocol) ) == NULL) {
         fprintf(stderr, "Failed create IoTHub with provisioned URI %s and device ID %s!\n", dps_data.iothub_uri, dps_data.device_id);
     }
+
+cleanup:
     free(dps_data.iothub_uri);
     dps_data.iothub_uri = NULL;
     free(dps_data.device_id);
