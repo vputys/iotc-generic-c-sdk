@@ -23,11 +23,69 @@
 #define IOTHUB_SAS_TOKEN_FORMAT "SharedAccessSignature sr=%s&sig=%s&se=%lu"
 #endif
 
-unsigned char *hmac_sha256(const void *key, int keylen,
+#if 1
+void hmac_sha256(const void *key, int keylen,
                                    const unsigned char *data, int datalen,
                                    unsigned char *result, unsigned int *resultlen) {
-    return HMAC(EVP_sha256(), key, keylen, data, datalen, result, resultlen);
+    HMAC(EVP_sha256(), key, keylen, data, datalen, result, resultlen);
 }
+#else
+void sha256_helper(const unsigned char *data1, int datalen1,
+            const unsigned char *data2, int datalen2,
+            unsigned char *result, unsigned int *resultlen) {
+	EVP_MD_CTX *c = EVP_MD_CTX_new();
+
+	EVP_DigestInit_ex(c, EVP_sha256(), NULL);
+	if(data1 != NULL && datalen1 != 0) {
+            EVP_DigestUpdate(c, data1, datalen1);
+	}
+	if(data2 != NULL && datalen2 != 0) {
+            EVP_DigestUpdate(c, data2, datalen2);
+	}
+        EVP_DigestFinal_ex(c, result, resultlen);
+	EVP_MD_CTX_free(c);
+}
+
+/*
+ * This implementation of hmac_sha256 is based on the description in Wikipedia
+ * https://en.wikipedia.org/wiki/HMAC
+ */
+void hmac_sha256(const void *key, int keylen,
+                                   const unsigned char *data, int datalen,
+                                   unsigned char *result, unsigned int *resultlen) {
+    const int hashSize = 32;
+    const int blockSize = 64;
+    int dummySize;
+
+    unsigned char k_dash[blockSize];
+    unsigned char i_key_pad_message_hash[hashSize];
+    unsigned char output_hash[hashSize];
+
+    memset(k_dash, 0, blockSize);
+    if(keylen > blockSize) {
+	sha256_helper(key, keylen, NULL, 0, k_dash, &dummySize);
+	keylen = blockSize;
+    } else {
+        memcpy(k_dash, key, keylen);
+    }
+
+    {
+        unsigned char i_key_pad[blockSize];
+        for(int i = 0;i < blockSize;i++) {
+            i_key_pad[i] = 0x36 ^ k_dash[i];
+        }
+
+        sha256_helper(i_key_pad, blockSize, data, datalen, i_key_pad_message_hash, &dummySize);
+    }
+
+    unsigned char o_key_pad[blockSize];
+    for(int i = 0;i < blockSize;i++) {
+        o_key_pad[i] = 0x5c ^ k_dash[i];
+    }
+
+    sha256_helper(o_key_pad, blockSize, i_key_pad_message_hash, hashSize, result, resultlen);
+}
+#endif
 
 unsigned char *b64_string_to_buffer(const char *input, unsigned int *len) {
     BIO *b64, *source;
@@ -138,7 +196,7 @@ char *gen_sas_token(const char *host, const char *cpid, const char *duid, char *
     unsigned int bufflen = 0;
     unsigned char *key = b64_string_to_buffer(b64key, &bufflen);
 
-    unsigned char digest[EVP_MAX_MD_SIZE];;
+    unsigned char digest[EVP_MAX_MD_SIZE];
     unsigned int digest_len = 0;
     hmac_sha256(key, (int) bufflen, (const unsigned char*) string_to_sign, (int) strlen(string_to_sign), digest, &digest_len);
     free(key);
