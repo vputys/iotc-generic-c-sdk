@@ -16,13 +16,16 @@
 #define F_OK 0
 #include <Windows.h>
 #include <io.h>
-int usleep(unsigned long usec) {
+int iotc_usleep(unsigned long usec) {
     Sleep(usec / 1000);
     return 0;
 }
 #define access    _access_s
 #else
 #include <unistd.h>
+static int iotc_usleep(unsigned long usec) {
+    return usleep(usec);
+}
 #endif
 
 #define APP_VERSION "00.01.00"
@@ -31,21 +34,21 @@ static void on_connection_status(IotConnectConnectionStatus status) {
     // Add your own status handling
     switch (status) {
         case IOTC_CS_MQTT_CONNECTED:
-            printf("IoTConnect Client Connected\n");
+            IOTC_DEBUG("IoTConnect Client Connected\n");
             break;
         case IOTC_CS_MQTT_DISCONNECTED:
-            printf("IoTConnect Client Disconnected\n");
+            IOTC_DEBUG("IoTConnect Client Disconnected\n");
             break;
         default:
-            printf("IoTConnect Client ERROR\n");
+            IOTC_DEBUG("IoTConnect Client ERROR\n");
             break;
     }
 }
 
 static void command_status(IotclEventData data, bool status, const char *command_name, const char *message) {
     const char *ack = iotcl_create_ack_string_and_destroy_event(data, status, message);
-    printf("command: %s status=%s: %s\n", command_name, status ? "OK" : "Failed", message);
-    printf("Sent CMD ack: %s\n", ack);
+    IOTC_DEBUG("command: %s status=%s: %s\n", command_name, status ? "OK" : "Failed", message);
+    IOTC_DEBUG("Sent CMD ack: %s\n", ack);
     iotconnect_sdk_send_packet(ack);
     free((void *) ack);
 }
@@ -73,18 +76,18 @@ static void on_ota(IotclEventData data) {
     char *url = iotcl_clone_download_url(data, 0);
     bool success = false;
     if (NULL != url) {
-        printf("Download URL is: %s\n", url);
+        IOTC_DEBUG("Download URL is: %s\n", url);
         const char *version = iotcl_clone_sw_version(data);
         if (is_app_version_same_as_ota(version)) {
-            printf("OTA request for same version %s. Sending success\n", version);
+            IOTC_DEBUG("OTA request for same version %s. Sending success\n", version);
             success = true;
             message = "Version is matching";
         } else if (app_needs_ota_update(version)) {
-            printf("OTA update is required for version %s.\n", version);
+            IOTC_DEBUG("OTA update is required for version %s.\n", version);
             success = false;
             message = "Not implemented";
         } else {
-            printf("Device firmware version %s is newer than OTA version %s. Sending failure\n", APP_VERSION,
+            IOTC_DEBUG("Device firmware version %s is newer than OTA version %s. Sending failure\n", APP_VERSION,
                    version);
             // Not sure what to do here. The app version is better than OTA version.
             // Probably a development version, so return failure?
@@ -101,14 +104,14 @@ static void on_ota(IotclEventData data) {
         const char *command = iotcl_clone_command(data);
         if (NULL != command) {
             // URL will be inside the command
-            printf("Command is: %s\n", command);
+            IOTC_DEBUG("Command is: %s\n", command);
             message = "Old back end URLS are not supported by the app";
             free((void *) command);
         }
     }
     const char *ack = iotcl_create_ack_string_and_destroy_event(data, success, message);
     if (NULL != ack) {
-        printf("Sent OTA ack: %s\n", ack);
+        IOTC_DEBUG("Sent OTA ack: %s\n", ack);
         iotconnect_sdk_send_packet(ack);
         free((void *) ack);
     }
@@ -116,25 +119,66 @@ static void on_ota(IotclEventData data) {
 
 
 static void publish_telemetry() {
-    IotclMessageHandle msg = iotcl_telemetry_create();
+    IotclMessageHandle msg = NULL;
+    const char *str = NULL;
+    const char *timestamp = NULL;
+
+    msg = iotcl_telemetry_create();
+    if(msg == NULL) {
+        IOTC_ERROR("iotcl_telemetry_create() failed\n");
+        goto cleanup;
+    }
 
     // Optional. The first time you create a data point, the current timestamp will be automatically added
     // TelemetryAddWith* calls are only required if sending multiple data points in one packet.
-    iotcl_telemetry_add_with_iso_time(msg, iotcl_iso_timestamp_now());
-    iotcl_telemetry_set_string(msg, "version", APP_VERSION);
-    iotcl_telemetry_set_number(msg, "cpu", 3.123); // test floating point numbers
+    timestamp = iotcl_iso_timestamp_now();
+    if(timestamp == NULL) {
+        IOTC_ERROR("iotcl_iso_timestamp_now() failed\n");
+        goto cleanup;
+    }
 
-    const char *str = iotcl_create_serialized_string(msg, false);
+    if(iotcl_telemetry_add_with_iso_time(msg, timestamp) == false) {
+        IOTC_ERROR("iotcl_telemetry_add_with_iso_time() failed\n");
+        goto cleanup;
+    }
+
+    if(iotcl_telemetry_set_string(msg, "version", APP_VERSION) == false) {
+        IOTC_ERROR("iotcl_telemetry_set_string() failed\n");
+        goto cleanup;
+    }
+
+    // test floating point numbers
+    if(iotcl_telemetry_set_number(msg, "cpu", 3.123) == false) {
+        IOTC_ERROR("iotcl_telemetry_set_number() failed\n");
+        goto cleanup;
+    }
+
+    str = iotcl_create_serialized_string(msg, false);
+    if(str == NULL) {
+        IOTC_ERROR("iotcl_create_serialized_string() failed\n");
+        goto cleanup;
+    }
+
+    // partial cleanup
     iotcl_telemetry_destroy(msg);
-    printf("Sending: %s\n", str);
+    msg = NULL;
+
+    IOTC_DEBUG("Sending: %s\n", str);
     iotconnect_sdk_send_packet(str); // underlying code will report an error
-    iotcl_destroy_serialized(str);
+cleanup:
+    if(msg) {
+        iotcl_telemetry_destroy(msg);
+    }
+
+    if(str) {
+        iotcl_destroy_serialized(str);
+    }
 }
 
 
 int main(int argc, char *argv[]) {
     if (access(IOTCONNECT_SERVER_CERT, F_OK) != 0) {
-        fprintf(stderr, "Unable to access IOTCONNECT_SERVER_CERT. "
+        IOTC_ERROR("Unable to access IOTCONNECT_SERVER_CERT. "
                "Please change directory so that %s can be accessed from the application or update IOTCONNECT_CERT_PATH\n",
                IOTCONNECT_SERVER_CERT);
     }
@@ -143,13 +187,15 @@ int main(int argc, char *argv[]) {
         if (access(IOTCONNECT_IDENTITY_CERT, F_OK) != 0 ||
             access(IOTCONNECT_IDENTITY_KEY, F_OK) != 0
                 ) {
-            fprintf(stderr, "Unable to access device identity private key and certificate. "
+            IOTC_ERROR("Unable to access device identity private key and certificate. "
                    "Please change directory so that %s can be accessed from the application or update IOTCONNECT_CERT_PATH\n",
                    IOTCONNECT_SERVER_CERT);
         }
     }
 
     IotConnectClientConfig *config = iotconnect_sdk_init_and_get_config();
+    memset(config, 0, sizeof(*config));
+
     config->cpid = IOTCONNECT_CPID;
     config->env = IOTCONNECT_ENV;
     config->duid = IOTCONNECT_DUID;
@@ -163,9 +209,11 @@ int main(int argc, char *argv[]) {
         config->auth_info.data.scope_id = IOTCONNECT_SCOPE_ID;
     } else if (config->auth_info.type == IOTC_AT_SYMMETRIC_KEY){
         config->auth_info.data.symmetric_key = IOTCONNECT_SYMMETRIC_KEY;
-    } else if (config->auth_info.type != IOTC_AT_TOKEN) { // token type does not need any secret or info
+    } else if (config->auth_info.type == IOTC_AT_TOKEN) {
+        // token type does not need any secret or info
+    } else {
         // none of the above
-        fprintf(stderr, "IOTCONNECT_AUTH_TYPE is invalid\n");
+        IOTC_ERROR("IOTCONNECT_AUTH_TYPE is invalid\n");
         return -1;
     }
 
@@ -179,21 +227,29 @@ int main(int argc, char *argv[]) {
     for (int j = 0; j < 10; j++) {
         int ret = iotconnect_sdk_init();
         if (0 != ret) {
-            fprintf(stderr, "IoTConnect exited with error code %d\n", ret);
+            IOTC_ERROR("IoTConnect exited with error code %d\n", ret);
             return ret;
         }
+        IOTC_DEBUG("iotconnect_sdk_init() %d\n", j);
 
         // send 10 messages
-        for (int i = 0; iotconnect_sdk_is_connected() && i < 10; i++) {
+        for (int i = 0; i < 10; i++) {
+            if  (!iotconnect_sdk_is_connected()) {
+                IOTC_ERROR("iotconnect_sdk_is_connected() returned false\n");
+                break;
+            }
+
             publish_telemetry();
             // repeat approximately evey ~5 seconds
             for (int k = 0; k < 500; k++) {
                 iotconnect_sdk_receive();
-                usleep(10000); // 10ms
+                iotc_usleep(10000); // 10ms
             }
         }
+
         iotconnect_sdk_disconnect();
     }
 
+    IOTC_DEBUG("exiting basic_sample()\n" );
     return 0;
 }
