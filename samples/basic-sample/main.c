@@ -123,6 +123,9 @@ static void publish_telemetry() {
     iotcl_telemetry_add_with_iso_time(msg, iotcl_iso_timestamp_now());
     iotcl_telemetry_set_string(msg, "version", APP_VERSION);
     iotcl_telemetry_set_number(msg, "cpu", 3.123); // test floating point numbers
+    iotcl_telemetry_set_bool(msg, "is_vlads_test", true);
+    iotcl_telemetry_set_string(msg, "my_str", "MY STRING WILL BE DESTROYED");
+    iotcl_telemetry_set_null(msg, "my_str");
 
     const char *str = iotcl_create_serialized_string(msg, false);
     iotcl_telemetry_destroy(msg);
