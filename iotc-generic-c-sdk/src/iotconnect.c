@@ -95,6 +95,8 @@ static IotclDiscoveryResponse *run_http_discovery(const char *cpid, const char *
             IOTCONNECT_DISCOVERY_HOSTNAME, cpid, env
     );
 
+    printf("\ndiscovery url: [%s]\n", url_buff);
+
     IotConnectHttpResponse response;
     iotconnect_https_request(&response,
                              url_buff,
@@ -151,6 +153,8 @@ static IotclSyncResponse *run_http_sync(const char *cpid, const char *uniqueid) 
              cpid,
              uniqueid
     );
+
+    printf("\nurlbuff:[%s]\n", url_buff);
 
     IotConnectHttpResponse response;
     iotconnect_https_request(&response,
