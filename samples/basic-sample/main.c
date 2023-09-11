@@ -8,6 +8,7 @@
 
 #include "iotconnect_common.h"
 #include "iotconnect.h"
+#include "cJSON.h"
 
 #include "app_config.h"
 
@@ -26,6 +27,14 @@ int usleep(unsigned long usec) {
 #endif
 
 #define APP_VERSION "00.01.00"
+#define STRINGS_ARE_EQUAL 0
+
+typedef struct cert_struct {
+
+    char* x509_id_cert;
+    char* x509_id_key;
+
+} cert_struct_t;
 
 static void on_connection_status(IotConnectConnectionStatus status) {
     // Add your own status handling
@@ -134,12 +143,180 @@ static void publish_telemetry() {
     iotcl_destroy_serialized(str);
 }
 
+static int parse_paramaters_json(const char* json_str, cert_struct_t* certs){
+
+    if (!json_str || !certs){
+        printf("NULL PTR. Aborting\n");
+        return 1;
+    }
+
+    printf("json_str in function: %s\n", json_str);
+
+    cJSON *auth_type = NULL;
+    
+    cJSON *x509_obj = NULL;
+    cJSON *x509_id_cert = NULL;
+    cJSON *x509_id_key = NULL; 
+
+    cJSON *json_parser = NULL;
+
+
+    json_parser = cJSON_Parse(json_str);
+
+    if (!json_parser){
+        const char *error_ptr = cJSON_GetErrorPtr();
+        if (error_ptr != NULL)
+        {
+            fprintf(stderr, "Error before: %s\n", error_ptr);
+        }
+        goto FAIL;
+    }
+
+    auth_type = cJSON_GetObjectItemCaseSensitive(json_parser, "auth_type");
+
+    if (!auth_type) {
+        printf("Failed to get auth_type. Aborting\n");
+        goto FAIL;
+    }
+
+    printf("auth type: %s\n", auth_type->valuestring);
+
+    // ignoring auth type for now
+
+    x509_obj = cJSON_GetObjectItem(json_parser, "x509_certs");
+
+    if (!x509_obj){
+        printf("Failed to get x509 object. Aborting\n");
+        goto FAIL;
+    }
+
+    printf("auth type: %s\n", x509_obj->valuestring);
+
+    // TODO: add error checking
+    x509_id_cert = cJSON_GetObjectItemCaseSensitive(x509_obj, "client_cert");
+    x509_id_key = cJSON_GetObjectItemCaseSensitive(x509_obj, "client_key");
+
+    printf("id cert path: {%s}\n", x509_id_cert->valuestring);
+    printf("id key path: {%s}\n", x509_id_key->valuestring);
+
+
+    certs->x509_id_cert = x509_id_cert->valuestring;
+    certs->x509_id_key = x509_id_key->valuestring;
+
+    printf("id cert path in struct: {%s}\n", certs->x509_id_cert);
+    printf("id key path in struct: {%s}\n", certs->x509_id_key);
+
+    return 0;
+
+FAIL:
+
+    cJSON_Delete(json_parser);
+    cJSON_Delete(x509_obj);
+    return 1;
+
+}
+
 
 int main(int argc, char *argv[]) {
     if (access(IOTCONNECT_SERVER_CERT, F_OK) != 0) {
         fprintf(stderr, "Unable to access IOTCONNECT_SERVER_CERT. "
                "Please change directory so that %s can be accessed from the application or update IOTCONNECT_CERT_PATH\n",
                IOTCONNECT_SERVER_CERT);
+    }
+
+    printf("input counter: %d\n", argc);
+
+    char* input_json_file = NULL;
+    cert_struct_t certs;
+
+    char* x509_identity_cert = NULL;
+    char* x509_identity_key = NULL;
+
+    if (argc > 1) {
+        // assuming only 2 parameters for now
+           
+        char * s = NULL;
+        s = strstr(argv[1], ".json");
+        if (s){ 
+            printf("Found it in %s\n", argv[1]);
+
+        } else if (!s) {
+            printf("String .json not found inside of %s\n", argv[1]);
+            return 1;
+        }
+    
+        input_json_file = argv[1];
+
+        printf("file: %s\n", input_json_file);
+
+        FILE *fd = NULL;
+
+
+        
+        fd = fopen(input_json_file, "r");
+
+        fseek(fd, 0l, SEEK_END);
+        long file_len = ftell(fd);
+
+        if (file_len <= 0){
+            printf("failed calculating file length: %ld. Aborting\n", file_len);
+            return 1;
+        }
+
+        printf("found length %ld \n", file_len);
+        //char *text = NULL;
+        rewind(fd);
+
+
+        char* json_str = (char*)calloc(file_len+1, sizeof(char));
+
+        if (!json_str) {
+            printf("failed to calloc. Aborting\n");
+            json_str = NULL;
+            return 1;
+        }
+
+        for (int i = 0; i < file_len; i++){
+            json_str[i] = fgetc(fd);
+        }
+        printf ("end str: \n%s\n", json_str);
+
+        if (parse_paramaters_json(json_str, &certs) != 0) {
+            printf("Failed to parse input JSON file. Aborting\n");
+            if (json_str) {
+                free(json_str);
+                json_str = NULL;
+            }
+            return 1;
+        }
+
+
+        printf("id cert path in struct IN MAIN: {%s}\n", certs.x509_id_cert);
+        printf("id key path in struct IN MAIN: {%s}\n", certs.x509_id_key);
+
+        if(access(certs.x509_id_key, F_OK) != 0){
+            printf("failed to access parameter 1 - %s ; Aborting\n", certs.x509_id_key);
+            return 1;
+        } else {
+            x509_identity_key = certs.x509_id_key;
+        }
+        
+
+        if(access(certs.x509_id_cert, F_OK) != 0){
+            printf("failed to access parameter 2 - %s ; Aborting\n", certs.x509_id_cert);
+            return 1;
+        } else {
+            x509_identity_cert = certs.x509_id_cert;
+        }
+
+    } else {
+        x509_identity_cert = IOTCONNECT_IDENTITY_CERT;
+        x509_identity_key = IOTCONNECT_IDENTITY_KEY;
+        printf("Using built-in config parameters.\r\n");
+    }
+
+    if (!x509_identity_cert || !x509_identity_key){
+        printf("one of the cert paths is NULL\r\n");
     }
 
     if (IOTCONNECT_AUTH_TYPE == IOTC_AT_X509) {
@@ -160,8 +337,8 @@ int main(int argc, char *argv[]) {
     config->auth_info.trust_store = IOTCONNECT_SERVER_CERT;
 
     if (config->auth_info.type == IOTC_AT_X509) {
-        config->auth_info.data.cert_info.device_cert = IOTCONNECT_IDENTITY_CERT;
-        config->auth_info.data.cert_info.device_key = IOTCONNECT_IDENTITY_KEY;
+        config->auth_info.data.cert_info.device_cert = x509_identity_cert;
+        config->auth_info.data.cert_info.device_key = x509_identity_key;
     } else if (config->auth_info.type == IOTC_AT_TPM) {
         config->auth_info.data.scope_id = IOTCONNECT_SCOPE_ID;
     } else if (config->auth_info.type == IOTC_AT_SYMMETRIC_KEY){
