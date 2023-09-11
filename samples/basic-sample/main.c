@@ -129,7 +129,7 @@ static void on_ota(IotclEventData data) {
 }
 
 
-static void publish_telemetry(int sensor_reading) {
+static void publish_telemetry(sensor_info_t sensor, int reading) {
     IotclMessageHandle msg = iotcl_telemetry_create();
 
     // Optional. The first time you create a data point, the current timestamp will be automatically added
@@ -137,7 +137,7 @@ static void publish_telemetry(int sensor_reading) {
     iotcl_telemetry_add_with_iso_time(msg, iotcl_iso_timestamp_now());
     iotcl_telemetry_set_string(msg, "version", APP_VERSION);
     iotcl_telemetry_set_number(msg, "cpu", 3.123); // test floating point numbers
-    iotcl_telemetry_set_number(msg, "lux", sensor_reading);
+    iotcl_telemetry_set_number(msg, sensor.s_name, reading);
     iotcl_telemetry_set_bool(msg, "is_vlads_test", true);
     iotcl_telemetry_set_string(msg, "my_str", "MY STRING WILL BE DESTROYED");
     iotcl_telemetry_set_null(msg, "my_str");
@@ -252,9 +252,38 @@ static int parse_paramaters_json(const char* json_str, cert_struct_t* certs, sen
 
     //TODO; maybe rething this
     if (cJSON_HasObjectItem(json_parser, "sensor") == true){
-        parse_sensors(json_parser, sensor);
+        //parse_sensors(json_parser, sensor);
+
+        cJSON *sensor_obj = NULL;
+
+        cJSON *device_name = NULL;
+        cJSON *device_path = NULL;
+
+        sensor_obj = cJSON_GetObjectItem(json_parser, "sensor");
+
+        if (!sensor_obj){
+            printf("Failed to get sensor object. Aborting\n");
+            cJSON_Delete(sensor_obj);
+            return 1;
+        }
+
+
+        device_name = cJSON_GetObjectItemCaseSensitive(sensor_obj, "name");
+        device_path = cJSON_GetObjectItemCaseSensitive(sensor_obj, "path");    
+
+        sensor->s_name = device_name->valuestring;
+        sensor->s_path = device_path->valuestring;
+
+        printf("device name (struct): %s\r\n",sensor->s_name);
+        printf("device path (struct): %s\r\n",sensor->s_path);
+
+        //cJSON_Delete(sensor_obj);
     }
     
+    //printf("sensor data: name - %s; path - %s\r\n", *sensor->s_name, *sensor->s_path);
+
+    //cJSON_Delete(json_parser);
+    //cJSON_Delete(x509_obj);
     return 0;
 
 FAIL:
@@ -269,29 +298,37 @@ static int read_sensor(sensor_info_t sensor_data){
 
     char buff[6];
 
+    if(access(sensor_data.s_path, F_OK) != 0){
+        printf("failed to access sensor file - %s ; Aborting\n", sensor_data.s_path);
+        return 1;
+    }
+
     FILE* fd = NULL;
-    float reading = 0;
+    int reading = 0;
 
         
     fd = fopen(sensor_data.s_path, "r");
     
+    /*
     if (!fd) {
         printf("Failed to open file.\r\n");
         return -1;
     }
+    */
+
 
     //TODO: magic number
     for (int i = 0; i < 5; i++){
-        buff[0] = fgetc(fd);
+        buff[i] = fgetc(fd);
     }
 
     buff[5] = '\0';
 
-    close(fd);
+    fclose(fd);
 
-    reading = (float)atof(buff);
+    reading = (int)atof(buff);
 
-    printf("raw lux: %5s. raw but int: %f", buff, reading);
+    printf("raw but int: %d", reading);
 
     return reading;
 }
@@ -328,6 +365,11 @@ int main(int argc, char *argv[]) {
         input_json_file = argv[1];
 
         printf("file: %s\n", input_json_file);
+
+        if(access(input_json_file, F_OK) != 0){
+            printf("failed to access input json file - %s ; Aborting\n", input_json_file);
+            return 1;
+        }
 
         FILE *fd = NULL;
 
@@ -391,6 +433,8 @@ int main(int argc, char *argv[]) {
             x509_identity_cert = certs.x509_id_cert;
         }
 
+        printf("read sensor device params. name - %s; path - %s\r\n", sensor_data.s_name, sensor_data.s_path);
+
     } else {
         x509_identity_cert = IOTCONNECT_IDENTITY_CERT;
         x509_identity_key = IOTCONNECT_IDENTITY_KEY;
@@ -450,7 +494,7 @@ int main(int argc, char *argv[]) {
         // send 10 messages
         for (int i = 0; iotconnect_sdk_is_connected() && i < 10; i++) {
             reading = read_sensor(sensor_data);
-            publish_telemetry(reading);
+            publish_telemetry(sensor_data, reading);
             // repeat approximately evey ~5 seconds
             for (int k = 0; k < 500; k++) {
                 iotconnect_sdk_receive();
