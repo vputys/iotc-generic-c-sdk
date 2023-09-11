@@ -36,6 +36,11 @@ typedef struct cert_struct {
 
 } cert_struct_t;
 
+typedef struct sensor_info {
+    char* s_name;
+    char* s_path;
+} sensor_info_t;
+
 static void on_connection_status(IotConnectConnectionStatus status) {
     // Add your own status handling
     switch (status) {
@@ -124,7 +129,7 @@ static void on_ota(IotclEventData data) {
 }
 
 
-static void publish_telemetry() {
+static void publish_telemetry(int sensor_reading) {
     IotclMessageHandle msg = iotcl_telemetry_create();
 
     // Optional. The first time you create a data point, the current timestamp will be automatically added
@@ -132,6 +137,7 @@ static void publish_telemetry() {
     iotcl_telemetry_add_with_iso_time(msg, iotcl_iso_timestamp_now());
     iotcl_telemetry_set_string(msg, "version", APP_VERSION);
     iotcl_telemetry_set_number(msg, "cpu", 3.123); // test floating point numbers
+    iotcl_telemetry_set_number(msg, "lux", sensor_reading);
     iotcl_telemetry_set_bool(msg, "is_vlads_test", true);
     iotcl_telemetry_set_string(msg, "my_str", "MY STRING WILL BE DESTROYED");
     iotcl_telemetry_set_null(msg, "my_str");
@@ -143,7 +149,45 @@ static void publish_telemetry() {
     iotcl_destroy_serialized(str);
 }
 
-static int parse_paramaters_json(const char* json_str, cert_struct_t* certs){
+
+//TODO: add proper error checking
+static int parse_sensors(cJSON* main_obj, sensor_info_t* sensor_data){
+
+    if (!main_obj || !sensor_data){
+        printf("NULL PTR. Aborting\r\n");
+    }
+
+    cJSON *sensor_obj = NULL;
+
+    cJSON *device_name = NULL;
+    cJSON *device_path = NULL;
+
+    sensor_obj = cJSON_GetObjectItem(main_obj, "sensor");
+
+    if (!sensor_obj){
+        printf("Failed to get x509 object. Aborting\n");
+        cJSON_Delete(sensor_obj);
+        return 1;
+    }
+
+
+    device_name = cJSON_GetObjectItemCaseSensitive(sensor_obj, "name");
+    device_path = cJSON_GetObjectItemCaseSensitive(sensor_obj, "path");    
+
+    sensor_data->s_name = device_name->valuestring;
+    sensor_data->s_path = device_path->valuestring;
+
+    printf("device name (struct): %s\r\n",sensor_data->s_name);
+    printf("device path (struct): %s\r\n",sensor_data->s_path);
+
+    cJSON_Delete(sensor_obj);
+    
+
+    return 0;
+}
+
+//TODO: add error checking
+static int parse_paramaters_json(const char* json_str, cert_struct_t* certs, sensor_info_t* sensor){
 
     if (!json_str || !certs){
         printf("NULL PTR. Aborting\n");
@@ -206,6 +250,11 @@ static int parse_paramaters_json(const char* json_str, cert_struct_t* certs){
     printf("id cert path in struct: {%s}\n", certs->x509_id_cert);
     printf("id key path in struct: {%s}\n", certs->x509_id_key);
 
+    //TODO; maybe rething this
+    if (cJSON_HasObjectItem(json_parser, "sensor") == true){
+        parse_sensors(json_parser, sensor);
+    }
+    
     return 0;
 
 FAIL:
@@ -216,6 +265,36 @@ FAIL:
 
 }
 
+static int read_sensor(sensor_info_t sensor_data){
+
+    char buff[6];
+
+    FILE* fd = NULL;
+    float reading = 0;
+
+        
+    fd = fopen(sensor_data.s_path, "r");
+    
+    if (!fd) {
+        printf("Failed to open file.\r\n");
+        return -1;
+    }
+
+    //TODO: magic number
+    for (int i = 0; i < 5; i++){
+        buff[0] = fgetc(fd);
+    }
+
+    buff[5] = '\0';
+
+    close(fd);
+
+    reading = (float)atof(buff);
+
+    printf("raw lux: %5s. raw but int: %f", buff, reading);
+
+    return reading;
+}
 
 int main(int argc, char *argv[]) {
     if (access(IOTCONNECT_SERVER_CERT, F_OK) != 0) {
@@ -228,6 +307,7 @@ int main(int argc, char *argv[]) {
 
     char* input_json_file = NULL;
     cert_struct_t certs;
+    sensor_info_t sensor_data;
 
     char* x509_identity_cert = NULL;
     char* x509_identity_key = NULL;
@@ -281,7 +361,9 @@ int main(int argc, char *argv[]) {
         }
         printf ("end str: \n%s\n", json_str);
 
-        if (parse_paramaters_json(json_str, &certs) != 0) {
+        fclose(fd);
+
+        if (parse_paramaters_json(json_str, &certs, &sensor_data) != 0) {
             printf("Failed to parse input JSON file. Aborting\n");
             if (json_str) {
                 free(json_str);
@@ -355,6 +437,8 @@ int main(int argc, char *argv[]) {
     config->cmd_cb = on_command;
 
 
+    int reading = 0;
+
     // run a dozen connect/send/disconnect cycles with each cycle being about a minute
     for (int j = 0; j < 10; j++) {
         int ret = iotconnect_sdk_init();
@@ -365,7 +449,8 @@ int main(int argc, char *argv[]) {
 
         // send 10 messages
         for (int i = 0; iotconnect_sdk_is_connected() && i < 10; i++) {
-            publish_telemetry();
+            reading = read_sensor(sensor_data);
+            publish_telemetry(reading);
             // repeat approximately evey ~5 seconds
             for (int k = 0; k < 500; k++) {
                 iotconnect_sdk_receive();
