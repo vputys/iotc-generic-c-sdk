@@ -243,8 +243,9 @@ static int parse_paramaters_json(const char* json_str, cert_struct_t* certs, sen
     printf("id cert path: {%s}\n", x509_id_cert->valuestring);
     printf("id key path: {%s}\n", x509_id_key->valuestring);
 
-    strcpy(certs->x509_id_key, x509_id_key->valuestring);
-    strcpy(certs->x509_id_cert, x509_id_cert->valuestring);
+
+    certs->x509_id_cert = x509_id_cert->valuestring;
+    certs->x509_id_key = x509_id_key->valuestring;
 
     printf("id cert path in struct: {%s}\n", certs->x509_id_cert);
     printf("id key path in struct: {%s}\n", certs->x509_id_key);
@@ -252,7 +253,6 @@ static int parse_paramaters_json(const char* json_str, cert_struct_t* certs, sen
     //TODO; maybe rething this
     if (cJSON_HasObjectItem(json_parser, "sensor") == true){
         //parse_sensors(json_parser, sensor);
-
 
         cJSON *sensor_obj = NULL;
 
@@ -271,23 +271,21 @@ static int parse_paramaters_json(const char* json_str, cert_struct_t* certs, sen
         device_name = cJSON_GetObjectItemCaseSensitive(sensor_obj, "name");
         device_path = cJSON_GetObjectItemCaseSensitive(sensor_obj, "path");    
 
-        strcpy(sensor->s_name, device_name->valuestring);
-        strcpy(sensor->s_path, device_path->valuestring);
-
+        sensor->s_name = device_name->valuestring;
+        sensor->s_path = device_path->valuestring;
 
         printf("device name (struct): %s\r\n",sensor->s_name);
         printf("device path (struct): %s\r\n",sensor->s_path);
 
 
 
-        cJSON_Delete(sensor_obj);
+        //cJSON_Delete(sensor_obj);
     }
     
     //printf("sensor data: name - %s; path - %s\r\n", *sensor->s_name, *sensor->s_path);
 
-    cJSON_Delete(x509_obj);
-    cJSON_Delete(json_parser);
-    
+    //cJSON_Delete(json_parser);
+    //cJSON_Delete(x509_obj);
     return 0;
 
 FAIL:
